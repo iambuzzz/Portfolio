@@ -107,21 +107,36 @@ const Window = (props: WindowProps) => {
   const initWidth = Math.min(winWidth, props.width || 640);
   const initHeight = Math.min(winHeight, props.height || 400);
 
-  const [state, setState] = useState<WindowState>({
+  // Keep windows reachable: at least minMarginX of the window stays on screen
+  // horizontally, and the title bar stays between the menu bar and the dock.
+  // (x is offset by winWidth because window-bound is sized 2× the viewport.)
+  const clamp = useCallback(
+    (x: number, y: number, w: number) => ({
+      x: Math.round(Math.min(winWidth * 2 - minMarginX, Math.max(winWidth - w + minMarginX, x))),
+      y: Math.round(Math.min(winHeight - minMarginY - (dockSize + 15 + minMarginY), Math.max(0, y))),
+    }),
+    [winWidth, winHeight, dockSize]
+  );
+
+  // State always holds the clamped position so react-rnd's internal drag
+  // position matches what is rendered (a mismatch made the first drag/click
+  // after opening jump or lag).
+  const [state, setState] = useState<WindowState>(() => ({
     width: initWidth,
     height: initHeight,
-    // + winWidth because of the boundary offset (window-bound is sized 2× viewport)
-    x: winWidth + (winWidth - initWidth) / 2 + (props.x || 0),
-    y: (winHeight - initHeight - dockSize - minMarginY) / 2 + (props.y || 0),
-  });
+    ...clamp(
+      winWidth + (winWidth - initWidth) / 2 + (props.x || 0),
+      (winHeight - initHeight - dockSize - minMarginY) / 2 + (props.y || 0),
+      initWidth
+    ),
+  }));
 
   useEffect(() => {
-    setState((prev) => ({
-      ...prev,
-      width: Math.min(winWidth, prev.width),
-      height: Math.min(winHeight, prev.height),
-    }));
-  }, [winWidth, winHeight]);
+    setState((prev) => {
+      const width = Math.min(winWidth, prev.width);
+      return { ...prev, width, height: Math.min(winHeight, prev.height), ...clamp(prev.x, prev.y, width) };
+    });
+  }, [winWidth, winHeight, clamp]);
 
   const isMobile = winWidth < 768;
   const round = (props.max || isMobile) ? "rounded-none" : "";
@@ -136,26 +151,23 @@ const Window = (props: WindowProps) => {
     <Rnd
       bounds="parent"
       size={{ width, height }}
-      position={{
-        x: (props.max || isMobile)
-          ? winWidth
-          : Math.min(winWidth * 2 - minMarginX, Math.max(winWidth - state.width + minMarginX, state.x)),
-        y: (props.max || isMobile)
-          ? -minMarginY
-          : Math.min(winHeight - minMarginY - (dockSize + 15 + minMarginY), Math.max(0, state.y)),
-      }}
-      onDragStop={(_, d) => setState((prev) => ({ ...prev, x: d.x, y: d.y }))}
+      position={
+        props.max || isMobile ? { x: winWidth, y: -minMarginY } : { x: state.x, y: state.y }
+      }
+      onDragStop={(_, d) => setState((prev) => ({ ...prev, ...clamp(d.x, d.y, prev.width) }))}
       onResizeStop={(_, __, ref, ___, position) =>
         setState((prev) => ({
           ...prev,
           width: parseInt(ref.style.width),
           height: parseInt(ref.style.height),
-          ...position,
+          ...clamp(position.x, position.y, parseInt(ref.style.width)),
         }))
       }
       minWidth={props.minWidth ?? 200}
       minHeight={props.minHeight ?? 150}
       dragHandleClassName="window-bar"
+      // Clicking the traffic lights must never start a drag.
+      cancel=".traffic-lights button"
       disableDragging={props.max || isMobile}
       enableResizing={!(props.max || isMobile)}
       lockAspectRatio={props.aspectRatio}

@@ -130,7 +130,7 @@ const Middlebar = ({ items, cur, setContent }: MiddlebarProps) => {
       {items.map((item: BearMdData, index: number) => (
         <li
           key={`bear-midbar-${item.id}`}
-          className={`h-24 flex flex-col cursor-default border-l-2 ${cur === index
+          className={`flex flex-col cursor-default border-l-2 ${cur === index
               ? "border-red-500 bg-white dark:bg-gray-900"
               : "border-transparent bg-transparent"
             } hover:(bg-white dark:bg-gray-900)`}
@@ -140,7 +140,7 @@ const Middlebar = ({ items, cur, setContent }: MiddlebarProps) => {
             <div className="-mt-1 w-10 vstack text-c-500">
               <span className={item.icon} />
             </div>
-            <span className="relative flex-1 font-bold" text="gray-900 dark:gray-100">
+            <span className="relative flex-1 font-bold pr-10 truncate" text="gray-900 dark:gray-100">
               {item.title}
               {item.link && (
                 <a
@@ -154,8 +154,8 @@ const Middlebar = ({ items, cur, setContent }: MiddlebarProps) => {
               )}
             </span>
           </div>
-          <div className="flex-1 ml-10" p="b-2 r-1" text="sm c-500" border="b c-300">
-            {item.excerpt}
+          <div className="ml-10" p="b-3 r-3" text="sm c-500" border="b c-300">
+            <div className="line-clamp-2">{item.excerpt}</div>
           </div>
         </li>
       ))}

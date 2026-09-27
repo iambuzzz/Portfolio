@@ -7,8 +7,7 @@ import type { MacActions } from "~/types";
 import DynamicIsland from "~/components/DynamicIsland";
 import NotificationCenter from "~/components/NotificationCenter";
 import AboutThisMacModal from "~/components/AboutThisMacModal";
-import CalendarWidget from "~/components/widgets/CalendarWidget";
-import WeatherWidget from "~/components/widgets/WeatherWidget";
+import DesktopWidgets from "~/components/widgets/DesktopWidgets";
 import ContextMenu from "~/components/menus/ContextMenu";
 import { FolderIcon, FolderHomeIcon, FolderDockIcon, PdfIcon } from "~/components/DesktopIcons";
 import { AnimatePresence, motion } from "framer-motion";
@@ -310,26 +309,8 @@ export default function Desktop(props: MacActions) {
       {/* Dynamic Island */}
       <DynamicIsland currentApp={state.currentTitle} />
 
-      {/* Desktop-pinned widgets — top-left, always visible, matches Tahoe ref */}
-      <div
-        style={{
-          position: "fixed",
-          top: 48,
-          left: 16,
-          zIndex: 55,
-          display: "flex",
-          flexDirection: "row",
-          gap: 16,
-          pointerEvents: "none",
-        }}
-      >
-        <div style={{ pointerEvents: "auto" }}>
-          <CalendarWidget compact={false} />
-        </div>
-        <div style={{ pointerEvents: "auto" }}>
-          <WeatherWidget compact={false} />
-        </div>
-      </div>
+      {/* Desktop widgets — draggable, removable, re-addable (right-click › Edit Widgets) */}
+      {!isMobile && <DesktopWidgets />}
 
       {/* Desktop Icons - top-right */}
       <div

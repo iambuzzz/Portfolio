@@ -32,11 +32,12 @@ const loginExitVariants = {
 import Mobile from "~/pages/Mobile";
 import { useWindowSize } from "~/hooks/useWindowSize";
 
+// No scale here: react-rnd measures window offsets with getBoundingClientRect
+// on mount, and a scaled ancestor made the first drag/click jump windows.
 const desktopEnterVariants = {
-  initial: { opacity: 0, scale: 0.97, filter: "brightness(2)" },
+  initial: { opacity: 0, filter: "brightness(2)" },
   animate: {
     opacity: 1,
-    scale: 1,
     filter: "brightness(1)",
     transition: {
       duration: 0.55,

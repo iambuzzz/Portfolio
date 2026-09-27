@@ -20,6 +20,7 @@ declare global {
   const ClockWidget: typeof import('./components/widgets/ClockWidget')['default']
   const ContextMenu: typeof import('./components/menus/ContextMenu')['default']
   const ControlCenterMenu: typeof import('./components/menus/ControlCenterMenu')['default']
+  const DesktopWidgets: typeof import('./components/widgets/DesktopWidgets')['default']
   const Dock: typeof import('./components/dock/Dock')['default']
   const DockItem: typeof import('./components/dock/DockItem')['default']
   const DynamicIsland: typeof import('./components/DynamicIsland')['default']
@@ -52,6 +53,7 @@ declare global {
   const Typora: typeof import('./components/apps/Typora')['default']
   const VSCode: typeof import('./components/apps/VSCode')['default']
   const VideoIcon: typeof import('./components/DesktopIcons')['VideoIcon']
+  const WIDGET_CATALOG: typeof import('./stores/widgets')['WIDGET_CATALOG']
   const WeatherWidget: typeof import('./components/widgets/WeatherWidget')['default']
   const WifiMenu: typeof import('./components/menus/WifiMenu')['default']
   const YouTube: typeof import('./components/apps/YouTube')['default']
@@ -90,6 +92,7 @@ declare global {
   const useStore: typeof import('./stores/index')['useStore']
   const useSyncExternalStore: typeof import('react')['useSyncExternalStore']
   const useTransition: typeof import('react')['useTransition']
+  const useWidgetStore: typeof import('./stores/widgets')['useWidgetStore']
   const useWindowSize: typeof import('./hooks/useWindowSize')['useWindowSize']
   const weatherWidgetTsxTmp27497: typeof import('./components/widgets/WeatherWidget.tsx.tmp.27497.eb98ea4b5b23')['default']
 }

@@ -5,7 +5,7 @@ const { socials } = profile;
 
 const aboutMe = `# ${profile.name}
 
-**${profile.role}**
+**${profile.role}**  
 📍 ${profile.location}
 
 ${profile.summary}
@@ -147,7 +147,7 @@ const bear: BearData[] = [
 
 ${p.tagline}
 
-**Stack:** ${p.stack.join(" · ")}
+**Stack:** ${p.stack.join(" · ")}  
 **Date:** ${p.date}
 
 [Live demo](${p.live}) · [GitHub](${p.github})

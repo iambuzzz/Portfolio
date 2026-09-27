@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useClickOutside } from "~/hooks";
+import { useWidgetStore } from "~/stores/widgets";
 
 interface ContextMenuProps {
   x: number;
@@ -80,6 +81,7 @@ export default function ContextMenu({ x, y, show, onClose, openApp }: ContextMen
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
       <MenuItem disabled>Get Info</MenuItem>
       <MenuItem onClick={() => openApp("system-settings")}>Change Desktop Background...</MenuItem>
+      <MenuItem onClick={() => useWidgetStore.getState().setGalleryOpen(true)}>Edit Widgets...</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
       <MenuItem disabled>Use Stacks</MenuItem>
       <MenuItem disabled>Sort By</MenuItem>
