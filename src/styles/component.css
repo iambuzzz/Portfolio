@@ -609,3 +609,30 @@
 .spotify-range:hover::-moz-range-thumb {
   opacity: 1;
 }
+
+/* ── Terminal ─────────────────────────────────────────────────────────────── */
+.terminal-app ::selection { background: var(--t-accent); color: var(--t-bg-solid); }
+.terminal-app .t-run {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+  text-decoration: underline dotted; text-underline-offset: 3px; white-space: pre;
+}
+.terminal-app .t-run:hover { text-decoration-style: solid; filter: brightness(1.25); }
+.terminal-app .t-link { color: var(--t-blue); text-decoration: underline; text-underline-offset: 3px; }
+.terminal-app .t-link:hover { filter: brightness(1.25); }
+.terminal-app .t-cursor { animation: t-blink 1s steps(1) infinite; }
+@keyframes t-blink { 50% { opacity: 0; } }
+.terminal-app .t-overlay, .terminal-app .t-input {
+  font: inherit; letter-spacing: inherit; white-space: pre; padding: 0; margin: 0; border: 0;
+}
+.terminal-app .t-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.terminal-app .t-input { width: 100%; background: transparent; outline: none; caret-color: var(--t-fg); position: relative; }
+.terminal-app pre, .terminal-app .t-overlay { tab-size: 4; }
+/* retro theme: amber CRT */
+.terminal-app.t-crt { text-shadow: 0 0 6px rgba(255, 176, 0, 0.55); position: relative; animation: t-flicker 4s infinite; }
+.terminal-app.t-crt::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.28) 0 1px, transparent 1px 3px),
+              radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.45) 100%);
+}
+@keyframes t-flicker { 0%, 100% { opacity: 1; } 47% { opacity: 0.985; } 50% { opacity: 0.94; } 53% { opacity: 0.99; } }
+@media (prefers-reduced-motion: reduce) { .terminal-app.t-crt { animation: none; } .terminal-app .t-cursor { animation: none; } }

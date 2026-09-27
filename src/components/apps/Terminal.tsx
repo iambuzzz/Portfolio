@@ -1,458 +1,497 @@
-import React from "react";
-import terminal from "~/configs/terminal";
-import { profile } from "~/data/profile";
-import type { TerminalData } from "~/types";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { commandNames, find, sandboxed, suggest } from "~/terminal/commands";
+import { formatPath } from "~/terminal/fs";
+import { C, Run, RunContext } from "~/terminal/ui";
+import type { Ctx, Program, PromptOptions, ThemeName } from "~/terminal/types";
 
-const CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const EMOJIS = ["\\(o_o)/", "(˚Δ˚)b", "(^-^*)", "(‵′)", "\\(°ˊДˋ°)/", "(‵′)"];
+// A simulated zsh. Commands come only from the allow-list in terminal/commands;
+// input is never evaluated, and all output is rendered as React text.
 
-const getEmoji = () => {
-  return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+const THEME_KEY = "terminal-theme";
+const MAX_BLOCKS = 400;
+// Survives closing/reopening the window during the visit.
+const HISTORY: string[] = [];
+
+const THEMES: Record<ThemeName, Record<string, string>> = {
+  default: {
+    bg: "rgba(24,24,27,0.94)", "bg-solid": "#18181b", fg: "#e7e7ea", muted: "#8b8b94", green: "#5af78e", yellow: "#f3f99d",
+    red: "#ff5c57", blue: "#57c7ff", purple: "#ff6ac1", cyan: "#9aedfe", orange: "#ffb86c", accent: "#57c7ff", border: "rgba(255,255,255,0.14)"
+  },
+  matrix: {
+    bg: "rgba(0,8,2,0.96)", "bg-solid": "#000802", fg: "#33ff66", muted: "#1c8c3a", green: "#33ff66", yellow: "#b6ff00",
+    red: "#ff3355", blue: "#00ff99", purple: "#66ff99", cyan: "#00ffcc", orange: "#aaff33", accent: "#33ff66", border: "rgba(51,255,102,0.25)"
+  },
+  dracula: {
+    bg: "rgba(40,42,54,0.97)", "bg-solid": "#282a36", fg: "#f8f8f2", muted: "#6272a4", green: "#50fa7b", yellow: "#f1fa8c",
+    red: "#ff5555", blue: "#8be9fd", purple: "#ff79c6", cyan: "#8be9fd", orange: "#ffb86c", accent: "#bd93f9", border: "rgba(98,114,164,0.5)"
+  },
+  solarized: {
+    bg: "rgba(0,43,54,0.97)", "bg-solid": "#002b36", fg: "#93a1a1", muted: "#586e75", green: "#859900", yellow: "#b58900",
+    red: "#dc322f", blue: "#268bd2", purple: "#6c71c4", cyan: "#2aa198", orange: "#cb4b16", accent: "#268bd2", border: "rgba(147,161,161,0.25)"
+  },
+  retro: {
+    bg: "rgba(20,12,0,0.98)", "bg-solid": "#140c00", fg: "#ffb000", muted: "#a06a00", green: "#ffcc33", yellow: "#ffd966",
+    red: "#ff6a00", blue: "#ffc04d", purple: "#ffa64d", cyan: "#ffcf66", orange: "#ff9900", accent: "#ffb000", border: "rgba(255,176,0,0.3)"
+  }
 };
 
-interface TerminalState {
-  rmrf: boolean;
-  content: JSX.Element[];
+const readTheme = (): ThemeName => {
+  try {
+    const t = localStorage.getItem(THEME_KEY) as ThemeName | null;
+    return t && t in THEMES ? t : "default";
+  } catch {
+    return "default";
+  }
+};
+
+/** Split a command line into words, honouring "double" and 'single' quotes. */
+function tokenize(line: string): string[] {
+  const out: string[] = [];
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line))) out.push(m[1] ?? m[2] ?? m[3]);
+  return out;
 }
 
-// rain animation is adopted from: https://codepen.io/P3R0/pen/MwgoKv
-const HowDare = ({ setRMRF }: { setRMRF: (value: boolean) => void }) => {
-  const FONT_SIZE = 12;
+/** Coloured rendering of a command line (used for the input and history). */
+function Highlight({ line }: { line: string }) {
+  const parts = line.split(/(\s+)/);
+  let seenCmd = false;
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (!p.trim()) return <span key={i}>{p}</span>;
+        if (!seenCmd) {
+          seenCmd = true;
+          const known = !!find(p);
+          return (
+            <span key={i} style={{ color: known ? "var(--t-green)" : sandboxed(p) ? "var(--t-orange)" : "var(--t-red)", fontWeight: known ? 600 : 400 }}>
+              {p}
+            </span>
+          );
+        }
+        const color = p.startsWith("-") ? "var(--t-cyan)" : /^["']/.test(p) ? "var(--t-yellow)" : "var(--t-fg)";
+        return (
+          <span key={i} style={{ color }}>
+            {p}
+          </span>
+        );
+      })}
+    </>
+  );
+}
 
-  const [emoji, setEmoji] = useState("");
-  const [drops, setDrops] = useState<number[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+const Prompt = ({ cwd }: { cwd: string[] }) => (
+  <span style={{ whiteSpace: "nowrap" }}>
+    <C c="green" b>
+      guest@ambuj
+    </C>{" "}
+    <C c="blue" b>
+      {formatPath(cwd)}
+    </C>{" "}
+    <C>%</C>{" "}
+  </span>
+);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
+interface Block {
+  id: number;
+  node: ReactNode;
+}
 
-    if (!container || !canvas) return;
+export default function Terminal() {
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [input, setInput] = useState("");
+  const [cwd, setCwdState] = useState<string[]>([]);
+  const [theme, setThemeState] = useState<ThemeName>(readTheme);
+  const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState<{ question: string; resolve: (v: string | null) => void } | null>(null);
+  const [program, setProgram] = useState<ReactNode>(null);
 
-    canvas.height = container.offsetHeight;
-    canvas.width = container.offsetWidth;
+  const idRef = useRef(0);
+  const cwdRef = useRef<string[]>([]);
+  const themeRef = useRef(theme);
+  const abortRef = useRef<AbortController | null>(null);
+  const histIdx = useRef<number>(HISTORY.length);
+  const draft = useRef("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-    const columns = Math.floor(canvas.width / FONT_SIZE);
-    setDrops(Array(columns).fill(1));
-
-    setEmoji(getEmoji());
+  const print = useCallback((node: ReactNode) => {
+    const id = ++idRef.current;
+    setBlocks((b) => {
+      const next = [...b, { id, node }];
+      return next.length > MAX_BLOCKS ? next.slice(-MAX_BLOCKS) : next;
+    });
   }, []);
 
-  const rain = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d")!;
-
-    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "#2e9244";
-    ctx.font = `${FONT_SIZE}px arial`;
-
-    drops.forEach((y, x) => {
-      const text = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
-      ctx.fillText(text, x * FONT_SIZE, y * FONT_SIZE);
-    });
-
-    setDrops(
-      drops.map((y) => {
-        // sends the drop back to the top randomly after it has crossed the screen
-        // adding randomness to the reset to make the drops scattered on the Y axis
-        if (y * FONT_SIZE > canvas.height && Math.random() > 0.975) return 1;
-        // increments Y coordinate
-        else return y + 1;
-      })
-    );
+  const setCwd = (p: string[]) => {
+    cwdRef.current = p;
+    setCwdState(p);
+  };
+  const setTheme = (t: ThemeName) => {
+    themeRef.current = t;
+    setThemeState(t);
+    try {
+      localStorage.setItem(THEME_KEY, t);
+    } catch {
+      // storage blocked
+    }
   };
 
-  useInterval(rain, 33);
+  // Stay pinned to the bottom as output grows (including typewriter text).
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const ro = new ResizeObserver(() => (el.scrollTop = el.scrollHeight));
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, []);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const focusInput = () => {
+    if (window.getSelection()?.toString()) return;
+    if (inputRef.current) inputRef.current.focus();
+    else rootRef.current?.focus();
+  };
+
+  // ── run a command line ─────────────────────────────────────────────────────
+  const execRef = useRef<(line: string, opts?: { echo?: boolean; nested?: boolean }) => Promise<void>>();
+  const exec = async (raw: string, { echo = true, nested = false } = {}) => {
+    const line = raw.trim();
+    if (echo)
+      print(
+        <div>
+          <Prompt cwd={cwdRef.current} />
+          <Highlight line={raw} />
+        </div>
+      );
+    if (!line) return;
+    if (echo && HISTORY[HISTORY.length - 1] !== line) HISTORY.push(line);
+    histIdx.current = HISTORY.length;
+
+    // Ctrl+C-able context, shared with nested runs (e.g. `ask` → `play`).
+    const controller = nested && abortRef.current ? abortRef.current : new AbortController();
+    if (!nested) abortRef.current = controller;
+
+    // `rm -rf /` must reach its easter egg even with odd spacing.
+    const [name, ...args] = tokenize(line);
+    const cmd = find(name);
+    if (!cmd) {
+      if (sandboxed(name)) {
+        print(
+          <span>
+            <C c="orange">🔒 {name}:</C> not available — this terminal is a sandboxed simulation running in your browser. Try <Run cmd="help" />.
+          </span>
+        );
+      } else {
+        const s = suggest(name);
+        print(
+          <span>
+            <C c="red">zsh: command not found: {name}</C>
+            {s && (
+              <>
+                {" "}
+                — did you mean <Run cmd={[s, ...args].join(" ")}>{s}</Run>?
+              </>
+            )}
+          </span>
+        );
+      }
+      return;
+    }
+
+    const ctx: Ctx = {
+      print,
+      clear: () => setBlocks([]),
+      get cwd() {
+        return cwdRef.current;
+      },
+      setCwd,
+      run: (l) => execRef.current!(l, { echo: false, nested: true }),
+      openApp: (id) => window.dispatchEvent(new CustomEvent("app:open", { detail: id })),
+      closeTerminal: () => window.dispatchEvent(new CustomEvent("app:close", { detail: "terminal" })),
+      setTheme,
+      get theme() {
+        return themeRef.current;
+      },
+      takeover: (prog: Program) =>
+        new Promise<void>((resolve) => {
+          setProgram(
+            prog((summary) => {
+              setProgram(null);
+              if (summary) print(summary);
+              resolve();
+              setTimeout(() => inputRef.current?.focus(), 0);
+            })
+          );
+        }),
+      prompt: (question: string, opts?: PromptOptions) =>
+        new Promise<string | null>((resolve) => {
+          setInput(opts?.initial ?? "");
+          setAsk({ question, resolve });
+          setTimeout(() => inputRef.current?.focus(), 0);
+        }),
+      signal: controller.signal,
+      history: HISTORY
+    };
+
+    if (!nested) {
+      setBusy(true);
+      // The input is hidden while busy; the root takes keys (Ctrl+C) instead.
+      setTimeout(() => {
+        const root = rootRef.current;
+        // Don't steal focus from a full-window program or a prompt input.
+        if (root && !inputRef.current && !root.contains(document.activeElement)) root.focus();
+      }, 0);
+    }
+    try {
+      await cmd.run(args, ctx);
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") print(<C c="red">{name}: {(e as Error).message}</C>);
+    } finally {
+      if (!nested) {
+        setBusy(false);
+        abortRef.current = null;
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }
+    }
+  };
+  execRef.current = exec;
+
+  // Welcome banner once per open (guarded: StrictMode runs effects twice in dev).
+  const bannerShown = useRef(false);
+  useEffect(() => {
+    if (bannerShown.current) return;
+    bannerShown.current = true;
+    exec("banner", { echo: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── completion ─────────────────────────────────────────────────────────────
+  const completions = (text: string): { prefix: string; options: string[] } => {
+    const endsWithSpace = /\s$/.test(text);
+    const words = tokenize(text);
+    if (words.length === 0) return { prefix: "", options: [] };
+    if (words.length === 1 && !endsWithSpace) {
+      const w = words[0].toLowerCase();
+      return { prefix: w, options: commandNames().filter((n) => n.startsWith(w)) };
+    }
+    const cmd = find(words[0]);
+    const args = endsWithSpace ? [...words.slice(1), ""] : words.slice(1);
+    const partial = args[args.length - 1] ?? "";
+    const all = cmd?.complete?.(args, { cwd: cwdRef.current }) ?? [];
+    return { prefix: partial, options: Array.from(new Set(all.filter((o) => o.startsWith(partial)))) };
+  };
+
+  // Fish-style grey suggestion: last matching history line, else first completion.
+  const hint = (() => {
+    if (!input || ask || busy) return "";
+    const fromHistory = [...HISTORY].reverse().find((h) => h.startsWith(input) && h !== input);
+    if (fromHistory) return fromHistory.slice(input.length);
+    const { prefix, options } = completions(input);
+    const first = options[0];
+    return first && first !== prefix ? first.slice(prefix.length) : "";
+  })();
+
+  const tabComplete = () => {
+    const { prefix, options } = completions(input);
+    if (!options.length) return;
+    const base = input.slice(0, input.length - prefix.length);
+    if (options.length === 1) {
+      const o = options[0];
+      setInput(base + o + (o.endsWith("/") ? "" : " "));
+      return;
+    }
+    // Extend to the longest common prefix, else list the options.
+    let common = options[0];
+    for (const o of options) while (!o.startsWith(common)) common = common.slice(0, -1);
+    if (common.length > prefix.length) setInput(base + common);
+    else
+      print(
+        <div>
+          <Prompt cwd={cwdRef.current} />
+          <Highlight line={input} />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0 18px", color: "var(--t-muted)" }}>
+            {options.map((o) => (
+              <span key={o}>{o}</span>
+            ))}
+          </div>
+        </div>
+      );
+  };
+
+  // ── keyboard ───────────────────────────────────────────────────────────────
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Keep desktop shortcuts (Cmd+F etc.) out while typing, except Esc/Cmd combos.
+    if (!e.metaKey) e.stopPropagation();
+    const k = e.key;
+    const ctrl = e.ctrlKey;
+
+    if (ctrl && k.toLowerCase() === "c") {
+      e.preventDefault();
+      if (ask) {
+        print(
+          <div>
+            <C c="yellow">{ask.question}</C> {input}
+            <C c="muted">^C</C>
+          </div>
+        );
+        const r = ask.resolve;
+        setAsk(null);
+        setInput("");
+        r(null);
+        abortRef.current?.abort();
+      } else if (busy) {
+        abortRef.current?.abort();
+        print(<C c="muted">^C</C>);
+      } else {
+        print(
+          <div>
+            <Prompt cwd={cwdRef.current} />
+            <Highlight line={input} />
+            <C c="muted">^C</C>
+          </div>
+        );
+        setInput("");
+      }
+      return;
+    }
+    if (ctrl && k.toLowerCase() === "l") {
+      e.preventDefault();
+      setBlocks([]);
+      return;
+    }
+    if (ctrl && k.toLowerCase() === "u") {
+      e.preventDefault();
+      setInput("");
+      return;
+    }
+
+    if (k === "Enter") {
+      e.preventDefault();
+      if (ask) {
+        print(
+          <div>
+            <C c="yellow">{ask.question}</C> {input}
+          </div>
+        );
+        const r = ask.resolve;
+        setAsk(null);
+        setInput("");
+        r(input);
+        return;
+      }
+      if (busy) return;
+      const line = input;
+      setInput("");
+      draft.current = "";
+      exec(line);
+      return;
+    }
+    if (k === "Tab") {
+      e.preventDefault();
+      if (!ask && !busy) tabComplete();
+      return;
+    }
+    if (k === "ArrowRight" && hint && inputRef.current?.selectionStart === input.length) {
+      e.preventDefault();
+      setInput(input + hint);
+      return;
+    }
+    if (k === "ArrowUp" && !ask) {
+      e.preventDefault();
+      if (!HISTORY.length) return;
+      if (histIdx.current === HISTORY.length) draft.current = input;
+      histIdx.current = Math.max(0, histIdx.current - 1);
+      setInput(HISTORY[histIdx.current]);
+      return;
+    }
+    if (k === "ArrowDown" && !ask) {
+      e.preventDefault();
+      if (histIdx.current >= HISTORY.length) return;
+      histIdx.current += 1;
+      setInput(histIdx.current === HISTORY.length ? draft.current : HISTORY[histIdx.current]);
+    }
+  };
+
+  // Keep the coloured overlay scrolled with the input on long lines.
+  const syncScroll = () => {
+    if (overlayRef.current && inputRef.current) overlayRef.current.scrollLeft = inputRef.current.scrollLeft;
+  };
+  useEffect(syncScroll, [input]);
+
+  const vars = Object.fromEntries(Object.entries(THEMES[theme]).map(([k, v]) => [`--t-${k}`, v])) as CSSProperties;
+  const showInput = !program && (!busy || !!ask);
 
   return (
-    <div
-      ref={containerRef}
-      className="fixed size-full bg-black text-white"
-      onClick={() => setRMRF(false)}
-    >
-      <canvas ref={canvasRef}></canvas>
-      <div className="font-avenir absolute h-28 text-center space-y-4 m-auto inset-0">
-        <div text-4xl>{emoji}</div>
-        <div text-3xl>HOW DARE YOU!</div>
-        <div>Click to go back</div>
-      </div>
-    </div>
-  );
-};
-
-export default class Terminal extends React.Component<{}, TerminalState> {
-  private history = [] as string[];
-  private curHistory = 0;
-  private curInputTimes = 0;
-  private curDirPath = [] as any;
-  private curChildren = terminal as any;
-  private commands: {
-    [key: string]: { (): void } | { (arg?: string): void };
-  };
-
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      content: [],
-      rmrf: false
-    };
-    this.commands = {
-      cd: this.cd,
-      ls: this.ls,
-      cat: this.cat,
-      clear: this.clear,
-      help: this.help,
-      whoami: this.whoami,
-      resume: this.resume,
-      open: this.open,
-      sudo: this.sudo
-    };
-  }
-
-  componentDidMount() {
-    this.reset();
-    this.generateInputRow(this.curInputTimes);
-  }
-
-  reset = () => {
-    const terminal = document.querySelector("#terminal-content") as HTMLElement;
-    terminal.innerHTML = "";
-  };
-
-  addRow = (row: JSX.Element) => {
-    if (this.state.content.find((item) => item.key === row.key)) return;
-
-    const content = this.state.content;
-    content.push(row);
-    this.setState({ content });
-  };
-
-  getCurDirName = () => {
-    if (this.curDirPath.length === 0) return "~";
-    else return this.curDirPath[this.curDirPath.length - 1];
-  };
-
-  getCurChildren = () => {
-    let children = terminal as any;
-    for (const name of this.curDirPath) {
-      children = children.find((item: TerminalData) => {
-        return item.title === name && item.type === "folder";
-      }).children;
-    }
-    return children;
-  };
-
-  // move into a specified folder
-  cd = (args?: string) => {
-    if (args === undefined || args === "~") {
-      // move to root
-      this.curDirPath = [];
-      this.curChildren = terminal;
-    } else if (args === ".") {
-      // stay in the current folder
-      return;
-    } else if (args === "..") {
-      // move to parent folder
-      if (this.curDirPath.length === 0) return;
-      this.curDirPath.pop();
-      this.curChildren = this.getCurChildren();
-    } else {
-      // move to certain child folder
-      const target = this.curChildren.find((item: TerminalData) => {
-        return item.title === args && item.type === "folder";
-      });
-      if (target === undefined) {
-        this.generateResultRow(
-          this.curInputTimes,
-          <span>{`cd: no such file or directory: ${args}`}</span>
-        );
-      } else {
-        this.curChildren = target.children;
-        this.curDirPath.push(target.title);
-      }
-    }
-  };
-
-  // display content of a specified folder
-  ls = () => {
-    const result = [];
-    for (const item of this.curChildren) {
-      result.push(
-        <span
-          key={`terminal-result-ls-${this.curInputTimes}-${item.id}`}
-          className={`${item.type === "file" ? "text-white" : "text-purple-300"}`}
-        >
-          {item.title}
-        </span>
-      );
-    }
-    this.generateResultRow(
-      this.curInputTimes,
-      <div className="grid grid-cols-4 w-full">{result}</div>
-    );
-  };
-
-  // display content of a specified file
-  cat = (args?: string) => {
-    const file = this.curChildren.find((item: TerminalData) => {
-      return item.title === args && item.type === "file";
-    });
-
-    if (file === undefined) {
-      this.generateResultRow(
-        this.curInputTimes,
-        <span>{`cat: ${args}: No such file or directory`}</span>
-      );
-    } else {
-      this.generateResultRow(this.curInputTimes, <span>{file.content}</span>);
-    }
-  };
-
-  // clear terminal
-  clear = () => {
-    this.curInputTimes += 1;
-    this.reset();
-  };
-
-  whoami = () => {
-    this.generateResultRow(
-      this.curInputTimes,
-      <div className="py-1">
-        <div className="text-yellow-200">{profile.name}</div>
-        <div>{profile.role}</div>
-        <div className="text-gray-400">{profile.location}</div>
-      </div>
-    );
-  };
-
-  resume = () => {
-    const link = document.createElement("a");
-    link.href = profile.resume;
-    link.download = profile.resumeFileName;
-    link.click();
-    this.generateResultRow(this.curInputTimes, <span>Downloading {profile.resumeFileName}…</span>);
-  };
-
-  open = (args?: string) => {
-    const project = profile.projects.find((p) => p.id === args?.toLowerCase());
-    if (!project) {
-      this.generateResultRow(
-        this.curInputTimes,
-        <span>
-          usage: open {"<project>"} — one of: {profile.projects.map((p) => p.id).join(", ")}
-        </span>
-      );
-      return;
-    }
-    window.open(project.live, "_blank", "noopener");
-    this.generateResultRow(this.curInputTimes, <span>Opening {project.live}</span>);
-  };
-
-  sudo = (args?: string) => {
-    if (args === "hire-me") {
-      this.generateResultRow(
-        this.curInputTimes,
-        <span className="text-green-300">
-          [sudo] access granted. Reach me at{" "}
-          <a className="text-blue-300" href={`mailto:${profile.email}`}>
-            {profile.email}
-          </a>{" "}
-          — or type `resume` to grab my résumé.
-        </span>
-      );
-    } else {
-      this.generateResultRow(
-        this.curInputTimes,
-        <span>{`${profile.handle} is not in the sudoers file. This incident will be reported.`}</span>
-      );
-    }
-  };
-
-  help = () => {
-    const help = (
-      <ul className="list-disc ml-6 pb-1.5">
-        <li>
-          <span text-red-400>cat {"<file>"}</span> - See the content of {"<file>"}
-        </li>
-        <li>
-          <span text-red-400>cd {"<dir>"}</span> - Move into
-          {" <dir>"}, "cd .." to move to the parent directory, "cd" or "cd ~" to return to
-          root
-        </li>
-        <li>
-          <span text-red-400>ls</span> - See files and directories in the current
-          directory
-        </li>
-        <li>
-          <span text-red-400>whoami</span> - Who am I?
-        </li>
-        <li>
-          <span text-red-400>resume</span> - Download my résumé
-        </li>
-        <li>
-          <span text-red-400>open {"<project>"}</span> - Open a project live (
-          {profile.projects.map((p) => p.id).join(", ")})
-        </li>
-        <li>
-          <span text-red-400>clear</span> - Clear the screen
-        </li>
-        <li>
-          <span text-red-400>help</span> - Display this help menu
-        </li>
-        <li>
-          <span text-red-400>rm -rf /</span> - :)
-        </li>
-        <li>
-          press <span text-red-400>up arrow / down arrow</span> - Select history commands
-        </li>
-        <li>
-          press <span text-red-400>tab</span> - Auto complete
-        </li>
-      </ul>
-    );
-    this.generateResultRow(this.curInputTimes, help);
-  };
-
-  autoComplete = (text: string) => {
-    if (text === "") return text;
-
-    const input = text.split(" ");
-    const cmd = input[0];
-    const args = input[1];
-
-    let result = text;
-
-    if (args === undefined) {
-      const guess = Object.keys(this.commands).find((item) => {
-        return item.substring(0, cmd.length) === cmd;
-      });
-      if (guess !== undefined) result = guess;
-    } else if (cmd === "cd" || cmd === "cat") {
-      const type = cmd === "cd" ? "folder" : "file";
-      const guess = this.curChildren.find((item: TerminalData) => {
-        return item.type === type && item.title.substring(0, args.length) === args;
-      });
-      if (guess !== undefined) result = cmd + " " + guess.title;
-    }
-    return result;
-  };
-
-  keyPress = (e: React.KeyboardEvent) => {
-    const keyCode = e.key;
-    const inputElement = document.querySelector(
-      `#terminal-input-${this.curInputTimes}`
-    ) as HTMLInputElement;
-    const inputText = inputElement.value.trim();
-    const input = inputText.split(" ");
-
-    if (keyCode === "Enter") {
-      // ----------- run command -----------
-      this.history.push(inputText);
-
-      const cmd = input[0];
-      const args = input[1];
-
-      // we can't edit the past input
-      inputElement.setAttribute("readonly", "true");
-
-      if (inputText.substring(0, 6) === "rm -rf") this.setState({ rmrf: true });
-      else if (cmd && Object.keys(this.commands).includes(cmd)) {
-        this.commands[cmd](args);
-      } else {
-        this.generateResultRow(
-          this.curInputTimes,
-          <span>{`zsh: command not found: ${cmd}`}</span>
-        );
-      }
-
-      // point to the last history command
-      this.curHistory = this.history.length;
-
-      // generate new input row
-      this.curInputTimes += 1;
-      this.generateInputRow(this.curInputTimes);
-    } else if (keyCode === "ArrowUp") {
-      // ----------- previous history command -----------
-      if (this.history.length > 0) {
-        if (this.curHistory > 0) this.curHistory--;
-        const historyCommand = this.history[this.curHistory];
-        inputElement.value = historyCommand;
-      }
-    } else if (keyCode === "ArrowDown") {
-      // ----------- next history command -----------
-      if (this.history.length > 0) {
-        if (this.curHistory < this.history.length) this.curHistory++;
-        if (this.curHistory === this.history.length) inputElement.value = "";
-        else {
-          const historyCommand = this.history[this.curHistory];
-          inputElement.value = historyCommand;
-        }
-      }
-    } else if (keyCode === "Tab") {
-      // ----------- auto complete -----------
-      inputElement.value = this.autoComplete(inputText);
-      // prevent tab outside the terminal
-      e.preventDefault();
-    }
-  };
-
-  focusOnInput = (id: number) => {
-    const input = document.querySelector(`#terminal-input-${id}`) as HTMLInputElement;
-    input.focus();
-  };
-
-  generateInputRow = (id: number) => {
-    const newRow = (
-      <div key={`terminal-input-row-${id}`} flex>
-        <div className="w-max hstack space-x-1.5">
-          <span text-yellow-200>
-            {profile.handle}@portfolio <span text-green-300>{this.getCurDirName()}</span>
-          </span>
-          <span text-red-400>{">"}</span>
-        </div>
-        <input
-          id={`terminal-input-${id}`}
-          className="flex-1 px-1 text-white outline-none bg-transparent"
-          onKeyDown={this.keyPress}
-          autoFocus={true}
-        />
-      </div>
-    );
-    this.addRow(newRow);
-  };
-
-  generateResultRow = (id: number, result: JSX.Element) => {
-    const newRow = (
-      <div key={`terminal-result-row-${id}`} break-all>
-        {result}
-      </div>
-    );
-    this.addRow(newRow);
-  };
-
-  render() {
-    return (
+    <RunContext.Provider value={(l) => !busy && !ask && !program && exec(l)}>
       <div
-        className="terminal font-terminal font-normal relative h-full bg-gray-800/90 overflow-y-scroll"
-        text="white sm"
-        onClick={() => this.focusOnInput(this.curInputTimes)}
+        ref={rootRef}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          // Only reached while a command runs (the input stops propagation).
+          if (!busy || program) return;
+          e.stopPropagation();
+          if (e.ctrlKey && e.key.toLowerCase() === "c") {
+            e.preventDefault();
+            abortRef.current?.abort();
+            print(<C c="muted">^C</C>);
+          }
+        }}
+        className={`terminal-app font-terminal ${theme === "retro" ? "t-crt" : ""}`}
+        style={{ ...vars, height: "100%", display: "flex", flexDirection: "column", background: "var(--t-bg)", color: "var(--t-fg)", fontSize: 13, lineHeight: 1.45, outline: "none" }}
+        onClick={focusInput}
       >
-        {this.state.rmrf && (
-          <HowDare setRMRF={(value: boolean) => this.setState({ rmrf: value })} />
+        {program ? (
+          <div style={{ flex: 1, minHeight: 0, padding: "8px 10px" }}>{program}</div>
+        ) : (
+          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 10px 12px" }}>
+            <div ref={contentRef}>
+              {blocks.map((b) => (
+                <div key={b.id} style={{ wordBreak: "break-word" }}>
+                  {b.node}
+                </div>
+              ))}
+              {showInput && (
+                <div style={{ display: "flex", alignItems: "baseline" }}>
+                  {ask ? <C c="yellow">{ask.question}&nbsp;</C> : <Prompt cwd={cwd} />}
+                  <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+                    {!ask && (
+                      <div ref={overlayRef} aria-hidden className="t-overlay">
+                        <Highlight line={input} />
+                        <span style={{ color: "var(--t-muted)" }}>{hint}</span>
+                      </div>
+                    )}
+                    <input
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      onScroll={syncScroll}
+                      onSelect={syncScroll}
+                      autoFocus
+                      spellCheck={false}
+                      autoCapitalize="off"
+                      autoComplete="off"
+                      aria-label={ask ? ask.question : "Terminal input"}
+                      className="t-input"
+                      style={{ color: ask ? "var(--t-fg)" : "transparent" }}
+                    />
+                  </div>
+                </div>
+              )}
+              {busy && !ask && (
+                <div style={{ color: "var(--t-muted)" }}>
+                  <span className="t-cursor">▋</span>
+                </div>
+              )}
+            </div>
+          </div>
         )}
-        <div p="y-2 x-1.5">
-          <span className="text-green-300">help</span>: Hey, you found the terminal!
-          Type `help` to get started.
-        </div>
-        <div id="terminal-content" p="x-1.5 b-2">
-          {this.state.content}
-        </div>
       </div>
-    );
-  }
+    </RunContext.Provider>
+  );
 }

@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { profile } from "~/data/profile";
+import { contactFormEnabled, mailtoLink, sendContactMessage } from "~/utils/contact";
 
 interface MailMessage {
   id: string;
@@ -62,11 +63,6 @@ GitHub: ${p.github}`,
 
 const FOLDERS = ["Inbox", "Sent", "Drafts", "Starred", "Trash"];
 
-// Sends visitor messages to my inbox via Web3Forms (free, client-side by
-// design; the access key only allows sending to my own address). Without a
-// key it falls back to opening the visitor's mail app.
-const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
-
 function ContactForm({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -75,32 +71,13 @@ function ContactForm({ onDone }: { onDone: () => void }) {
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!WEB3FORMS_KEY) {
-      const body = `${form.message}\n\n— ${form.name} (${form.email})`;
-      window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(form.subject)}&body=${encodeURIComponent(body)}`;
+    if (!contactFormEnabled) {
+      window.location.href = mailtoLink(form);
       return;
     }
+    const botcheck = (e.currentTarget.elements.namedItem("botcheck") as HTMLInputElement)?.checked ?? false;
     setStatus("sending");
-    try {
-      const res = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          access_key: WEB3FORMS_KEY,
-          subject: `[Portfolio] ${form.subject || "New message"}`,
-          from_name: form.name,
-          name: form.name,
-          email: form.email,
-          replyto: form.email,
-          message: form.message,
-          botcheck: (e.currentTarget.elements.namedItem("botcheck") as HTMLInputElement)?.checked ?? false
-        })
-      });
-      const data = await res.json();
-      setStatus(data.success ? "sent" : "error");
-    } catch {
-      setStatus("error");
-    }
+    setStatus((await sendContactMessage({ ...form, botcheck })) ? "sent" : "error");
   };
 
   const field: React.CSSProperties = { flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "var(--a-text)" };

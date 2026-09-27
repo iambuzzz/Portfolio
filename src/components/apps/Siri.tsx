@@ -7,23 +7,9 @@ import { SIRI_FALLBACK } from "~/data/siri";
 import { localAnswer } from "~/data/siriLocal";
 import { useMusicStore } from "~/stores/music";
 import { searchSongs } from "~/utils/saavn";
+import { toPlainText } from "~/utils/text";
 
 type SiriPhase = "idle" | "recording" | "processing" | "speaking" | "error";
-
-/** Replies are shown in a small bubble and read aloud: strip any markdown. */
-const toPlainText = (text: string) =>
-  text
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/`([^`]*)`/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [label](url) → label
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
-    .replace(/^\s*[-*•]\s+/gm, "") // bullets
-    .replace(/(\*\*|__)(.*?)\1/g, "$2") // bold
-    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, "$1$2") // italics
-    .replace(/[*#]/g, "")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
 
 /** Extra cleanup for the voice only: don't read out URLs, dashes or emoji. */
 const toSpeech = (text: string) =>

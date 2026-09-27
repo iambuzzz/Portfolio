@@ -97,13 +97,23 @@ export default function App() {
     setBooting(true);
   };
 
-  const restartMac = (e: React.MouseEvent): void => {
-    e.stopPropagation();
+  const reboot = (): void => {
     setRestart(true);
     setSleep(false);
     setLogin(false);
     setBooting(true);
   };
+
+  const restartMac = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    reboot();
+  };
+
+  // Apps can ask for a reboot (e.g. the Terminal's `rm -rf /` easter egg).
+  useEffect(() => {
+    window.addEventListener("system:restart", reboot);
+    return () => window.removeEventListener("system:restart", reboot);
+  }, []);
 
   const sleepMac = (e: React.MouseEvent): void => {
     e.stopPropagation();
