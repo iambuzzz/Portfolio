@@ -4,6 +4,7 @@ import { wallpaperThumb } from "~/utils";
 import { useState } from "react";
 import { useStore } from "~/stores";
 import { useWindowSize } from "~/hooks";
+import { profile } from "~/data/profile";
 
 type SettingsPanel =
   | "general"
@@ -253,7 +254,7 @@ const GeneralPanel = () => {
       <SectionTitle>Sharing</SectionTitle>
       <Card>
         <Row label="Computer Name">
-          <span style={{ fontSize: "12px", color: dark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)" }}>Akash's MacBook Pro</span>
+          <span style={{ fontSize: "12px", color: dark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)" }}>{profile.firstName}'s MacBook Pro</span>
         </Row>
       </Card>
     </div>
@@ -690,7 +691,6 @@ const SoundPanel = () => {
     { label: "iPhone Notification", value: "music/i_phone_notification.mp3" },
     { label: "Error Alert", value: "music/error.m4a" },
     { label: "Siri Sound", value: "music/siri.mp3" },
-    { label: "Akash Intro", value: "music/akashintro.m4a" },
   ];
 
   const handleSoundChange = (val: string) => {
@@ -1222,8 +1222,8 @@ const AboutPanel = () => {
           ["Memory", "16 GB"],
           ["Storage", "Powered by Cloud"],
           ["macOS", "Tahoe 26.0"],
-          ["Developer", "Akash Sharma"],
-          ["GitHub", "@aakashsharma003"],
+          ["Developer", profile.name],
+          ["GitHub", `@${profile.handle}`],
         ].map(([key, val]) => (
           <Row key={key} label={key}>
             <span style={{ fontSize: "12px", color: dark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)" }}>{val}</span>
@@ -1392,10 +1392,10 @@ export default function SystemSettings() {
                   overflow: "hidden"
                 }}
               >
-                <img src="/img/ui/avatar.jpg" alt="profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={profile.avatar} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div>
-                <div style={{ fontSize: "20px", fontWeight: 400, color: dark ? "#fff" : "#000", letterSpacing: "-0.5px" }}>Akash Sharma</div>
+                <div style={{ fontSize: "20px", fontWeight: 400, color: dark ? "#fff" : "#000", letterSpacing: "-0.5px" }}>{profile.name}</div>
                 <div style={{ fontSize: "13px", color: dark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", marginTop: "2px" }}>Apple ID, iCloud, Media & App Store</div>
               </div>
             </div>

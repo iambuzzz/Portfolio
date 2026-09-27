@@ -1,7 +1,9 @@
 export interface BearMdData {
   id: string;
   title: string;
-  file: string;
+  /** Remote/public markdown URL, or inline `content`. */
+  file?: string;
+  content?: string;
   icon: string;
   excerpt: string;
   link?: string;

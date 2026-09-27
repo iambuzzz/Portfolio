@@ -1,36 +1,12 @@
 import type { LaunchpadData } from "~/types";
+import { profile } from "~/data/profile";
 
-const launchpadApps: LaunchpadData[] = [
-  {
-    id: "library",
-    title: "Library",
-    img: "img/icons/launchpad/library-icon.png",
-    link: "https://github.com/aakashsharma003/lib"
-  },
-  {
-    id: "skill-exchange",
-    title: "SkillExchange",
-    img: "img/icons/launchpad/skill-exchange.png", // background should be black
-    link: "https://skill-exchange-fe.vercel.app/"
-  },
-  {
-    id: "share-code",
-    title: "ShareCode",
-    img: "img/icons/launchpad/share-code-app.png",
-    link: "https://share-your-codes.vercel.app/"
-  },
-  {
-    id: "paytm-web",
-    title: "Paytm",
-    img: "img/icons/launchpad/paytm-app.png",
-    link: "https://paytm-web.vercel.app/"
-  },
-  {
-    id: "attendance-web",
-    title: "MBM Attendance",
-    img: "img/icons/launchpad/attendance-web.png",
-    link: "https://mbm-attendance-web.vercel.app/"
-  }
-];
+// Projects open in Safari. Icons are placeholders until real ones are supplied.
+const launchpadApps: LaunchpadData[] = profile.projects.map((p) => ({
+  id: p.id,
+  title: p.name,
+  img: `img/icons/projects/${p.id}.svg`,
+  link: p.live
+}));
 
 export default launchpadApps;

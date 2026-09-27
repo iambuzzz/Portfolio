@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useClickOutside } from "~/hooks";
+import { profile } from "~/data/profile";
 
 interface AppleMenuProps {
   logout: () => void;
@@ -116,7 +117,7 @@ export default function AppleMenu({
       <MenuItem onClick={handleShut}>Shut Down...</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
       <MenuItem onClick={logout} hint="⌃⌘Q">Lock Screen</MenuItem>
-      <MenuItem onClick={logout} hint="⇧⌘Q">Log Out Akash...</MenuItem>
+      <MenuItem onClick={logout} hint="⇧⌘Q">Log Out {profile.firstName}...</MenuItem>
     </div>
   );
 }

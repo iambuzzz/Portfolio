@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { profile } from "~/data/profile";
 
 interface AppEntry {
   id: string;
@@ -10,63 +11,29 @@ interface AppEntry {
   icon: string;
   color: string;
   preview?: string;
+  link?: string;
 }
 
-const PROJECTS: AppEntry[] = [
-  {
-    id: "macos-portfolio",
-    name: "macOS Portfolio",
-    subtitle: "Web OS Experience.",
-    category: "Portfolio",
-    icon: "img/icons/mac-icon.png",
-    description: "A complete macOS Tahoe simulation built with React and Framer Motion.",
-    color: "linear-gradient(135deg, #007AFF 0%, #0051A8 100%)",
-    preview: "img/previews/macos.png"
-  },
-  {
-    id: "skill-exchange",
-    name: "SkillExchange",
-    subtitle: "Learn and teach.",
-    category: "Education",
-    icon: "img/icons/skill-exchange.png",
-    description: "Exchange skills with peers. Learn anything, teach what you know.",
-    color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    preview: "img/previews/skill.png"
-  },
-  {
-    id: "paytm-clone",
-    name: "Paytm Clone",
-    subtitle: "Payments made simple.",
-    category: "Finance",
-    icon: "img/icons/paytm.png",
-    description: "A full-stack Paytm-inspired payments app with modern UI.",
-    color: "linear-gradient(135deg, #00BAF2 0%, #002970 100%)",
-    preview: "img/previews/paytm.png"
-  },
-  {
-    id: "mbm-attendance",
-    name: "MBM Attendance",
-    subtitle: "Track your classes.",
-    category: "Productivity",
-    icon: "img/icons/mbm.png",
-    description: "Track your college attendance effortlessly.",
-    color: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
-    preview: "img/previews/mbm.png"
-  },
-  {
-    id: "share-code",
-    name: "ShareCode",
-    subtitle: "Code beautifully.",
-    category: "Developer Tools",
-    icon: "img/icons/sharecode.png",
-    description: "Share beautiful code snippets with syntax highlighting.",
-    color: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-    preview: "img/previews/sharecode.png"
-  },
+const GRADIENTS = [
+  "linear-gradient(135deg, #FF5F6D 0%, #C2185B 100%)",
+  "linear-gradient(135deg, #34C759 0%, #0E8A5F 100%)",
+  "linear-gradient(135deg, #FF9F0A 0%, #E8590C 100%)",
 ];
 
-const FEATURED = PROJECTS.slice(0, 3);
-const TOP_CHARTS = PROJECTS.slice(3);
+const PROJECTS: AppEntry[] = profile.projects.map((p, i) => ({
+  id: p.id,
+  name: p.name,
+  subtitle: p.tagline,
+  category: p.stack.slice(0, 3).join(" · "),
+  icon: `img/icons/projects/${p.id}.svg`,
+  description: p.tagline,
+  color: GRADIENTS[i % GRADIENTS.length],
+  preview: p.screenshots[0],
+  link: p.live,
+}));
+
+const FEATURED = PROJECTS;
+const TOP_CHARTS = PROJECTS;
 
 function AppIcon({ icon, color, size = 64 }: { icon: string; color: string; size?: number }) {
   const isImage = icon.includes("/");
@@ -116,6 +83,7 @@ function FeaturedCard({ app, index }: { app: AppEntry; index: number }) {
         background: "var(--c-bg-secondary)"
       }}
       whileHover={{ scale: 1.015, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", transition: { duration: 0.2 } }}
+      onClick={() => app.link && window.open(app.link, "_blank", "noopener")}
     >
       <div
         style={{
@@ -206,6 +174,7 @@ function AppRow({ app, index, showBorder = true }: { app: AppEntry; index: numbe
         position: "relative"
       }}
       whileHover={{ backgroundColor: "var(--c-bg-tertiary)", borderRadius: "8px", paddingLeft: "8px", paddingRight: "8px", margin: "0 -8px" }}
+      onClick={() => app.link && window.open(app.link, "_blank", "noopener")}
     >
       <AppIcon icon={app.icon} color={app.color} size={64} />
       
@@ -345,10 +314,10 @@ export default function AppStore() {
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--c-bg-tertiary)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
-          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "var(--system-blue, #007AFF)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold" }}>
-            A
+          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "var(--system-blue, #007AFF)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>
+            AJ
           </div>
-          <span style={{ fontSize: "14px", flex: 1 }}>Akash Sharma</span>
+          <span style={{ fontSize: "14px", flex: 1 }}>{profile.name}</span>
         </button>
       </div>
 

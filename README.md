@@ -1,33 +1,28 @@
-# macOS Tahoe Portfolio
+# Ambuj Jaiswal — Portfolio
 
-**Live Demo:** [https://aakash-sharma.vercel.app](https://aakash-sharma.vercel.app)
+My portfolio, built as a macOS Tahoe desktop that runs in the browser. Open apps, poke around the Terminal, or ask Siri about me.
 
-I've never owned a MacBook. But I've always been kind of obsessed with how macOS looks and feels — the way everything just... flows. So at some point I stopped wishing and started building.
+Built with React, TypeScript, Zustand, UnoCSS, Framer Motion and Vite. Deployed on Vercel.
 
-This is my attempt at recreating that experience on the web — the Liquid Glass surfaces, the soft animations, the little details that make Apple's design so satisfying. It's not a clone, more like a love letter to a design language I genuinely admire.
-
-Built with [React](https://reactjs.org/), [Zustand](https://zustand-demo.pmnd.rs/), [UnoCSS](https://uno.antfu.me/), [TypeScript](https://www.typescriptlang.org/), and [Vite](https://vitejs.dev/).
-
-&nbsp;
-
-## Little Previews
-
-<img width="1583" height="883" alt="image" src="https://github.com/user-attachments/assets/1ff2961d-316a-4a86-be16-4754c42badc3" />
-<img width="1597" height="883" alt="Screenshot from 2026-06-11 16-49-36" src="https://github.com/user-attachments/assets/bbfe9948-cead-49e0-95ab-8cc3b17c46b1" />
-
-&nbsp;
-
-## Usage
+## Development
 
 ```bash
 pnpm install
-pnpm dev      # dev server with hot reloading
-pnpm build    # production build → dist/
+pnpm dev        # dev server (also serves api/ locally)
+pnpm build      # typecheck + production build → dist/
+pnpm optimize   # re-encode images added to public/
 ```
 
-&nbsp;
+Siri needs a Groq API key. Copy `.env.example` to `.env` and set `GROQ_API_KEY` (server-side only — it is never sent to the browser). On Vercel, set the same variable under Project → Settings → Environment Variables.
 
-## Credits
+## Editing content
 
-- [macOS Tahoe 26](https://www.apple.com/newsroom/2025/06/macos-tahoe-26-makes-the-mac-more-capable-productive-and-intelligent-than-ever/)
-- [iOS 26](https://support.apple.com/en-us/123075)
+Everything personal lives in [`src/data/profile.ts`](src/data/profile.ts): bio, education, projects, skills, certifications and links. Every app reads from it.
+
+- Project screenshots: put them in `public/img/projects/` and list the paths in the project's `screenshots` array.
+- Profile photo: set `avatar` in `profile.ts`.
+- Résumé: replace `public/resume.pdf`.
+
+## Contact
+
+[ambujjais1@gmail.com](mailto:ambujjais1@gmail.com) · [GitHub](https://github.com/iambuzzz) · [LinkedIn](https://www.linkedin.com/in/ambuj-jaiswal-68385a290)

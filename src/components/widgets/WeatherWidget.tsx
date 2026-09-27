@@ -1,20 +1,64 @@
-const WEATHER_DATA = {
-  temp: 79,
-  condition: "Mostly Clear",
-  high: 84,
-  low: 62,
-  location: "Memphis",
-  humidity: 52,
-  wind: 8,
-  alert: "Air quality alert",
-  hourly: [
-    { time: "Now", icon: "partly-cloudy", temp: 79 },
-    { time: "1PM", icon: "sunny", temp: 82 },
-    { time: "2PM", icon: "sunny", temp: 84 },
-    { time: "3PM", icon: "cloudy", temp: 80 },
-    { time: "4PM", icon: "cloudy", temp: 76 },
-  ],
+// Live weather for where I am (Open-Meteo: free, no API key).
+const LOCATION = { name: "Kota", lat: 25.2138, lon: 75.8648, tz: "Asia/Kolkata" };
+
+interface Weather {
+  temp: number;
+  high: number;
+  low: number;
+  humidity: number;
+  wind: number;
+  condition: string;
+  icon: string;
+}
+
+// WMO weather codes -> label + icon
+const describe = (code: number, isDay: boolean): [string, string] => {
+  if (code === 0) return ["Clear", isDay ? "sunny" : "moon"];
+  if (code <= 2) return ["Partly Cloudy", isDay ? "partly-cloudy" : "moon"];
+  if (code === 3) return ["Cloudy", "cloudy"];
+  if (code <= 48) return ["Foggy", "cloudy"];
+  if (code <= 67 || (code >= 80 && code <= 82)) return ["Rain", "rainy"];
+  if (code <= 77 || code === 85 || code === 86) return ["Snow", "cloudy"];
+  return ["Thunderstorms", "rainy"];
 };
+
+let cached: Promise<Weather | null> | null = null;
+const fetchWeather = () =>
+  (cached ??= fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${LOCATION.lat}&longitude=${LOCATION.lon}` +
+      "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day" +
+      `&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=${encodeURIComponent(LOCATION.tz)}`
+  )
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((d): Weather => {
+      const [condition, icon] = describe(d.current.weather_code, d.current.is_day === 1);
+      return {
+        temp: Math.round(d.current.temperature_2m),
+        high: Math.round(d.daily.temperature_2m_max[0]),
+        low: Math.round(d.daily.temperature_2m_min[0]),
+        humidity: Math.round(d.current.relative_humidity_2m),
+        wind: Math.round(d.current.wind_speed_10m),
+        condition,
+        icon
+      };
+    })
+    .catch(() => null));
+
+function useWeather() {
+  const [weather, setWeather] = useState<Weather | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchWeather().then((w) => alive && setWeather(w));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return weather;
+}
+
+const localTime = () =>
+  new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: LOCATION.tz });
+
 
 // SF Symbol-style SVG weather icons
 const WeatherIcon = ({ type, size = 36 }: { type: string; size?: number }) => {
@@ -67,6 +111,19 @@ interface WeatherWidgetProps {
 }
 
 export default function WeatherWidget({ compact }: WeatherWidgetProps) {
+  const w = useWeather();
+  const WEATHER_DATA = {
+    location: LOCATION.name,
+    temp: w ? w.temp : "–",
+    high: w ? w.high : "–",
+    low: w ? w.low : "–",
+    humidity: w ? w.humidity : "–",
+    wind: w ? w.wind : "–",
+    condition: w ? w.condition : "Loading…",
+    icon: w ? w.icon : "partly-cloudy",
+    alert: `Local time ${localTime()} IST`
+  };
+
   const GLASS: React.CSSProperties = {
     background: "linear-gradient(145deg, rgba(22,28,42,0.84) 0%, rgba(16,22,36,0.92) 100%)",
     backdropFilter: "blur(64px) saturate(200%)",
@@ -109,7 +166,7 @@ export default function WeatherWidget({ compact }: WeatherWidgetProps) {
           paddingTop: 8,
           borderTop: "0.5px solid rgba(255,255,255,0.09)",
         }}>
-          <WeatherIcon type="moon" size={14} />
+          <span className="i-ph:clock" style={{ width: 12, height: 12, color: "rgba(255,255,255,0.55)" }} />
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em" }}>
             {WEATHER_DATA.alert}
           </span>
@@ -133,7 +190,7 @@ export default function WeatherWidget({ compact }: WeatherWidgetProps) {
             {WEATHER_DATA.condition}
           </div>
         </div>
-        <WeatherIcon type="partly-cloudy" size={48} />
+        <WeatherIcon type={WEATHER_DATA.icon} size={48} />
       </div>
 
       {/* Stats */}
@@ -152,7 +209,7 @@ export default function WeatherWidget({ compact }: WeatherWidgetProps) {
         paddingTop: 8,
         borderTop: "0.5px solid rgba(255,255,255,0.07)",
       }}>
-        <WeatherIcon type="moon" size={16} />
+        <span className="i-ph:clock" style={{ width: 14, height: 14, color: "rgba(255,255,255,0.5)" }} />
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.50)" }}>{WEATHER_DATA.alert}</span>
       </div>
     </div>

@@ -162,7 +162,7 @@ const Window = (props: WindowProps) => {
       lockAspectRatioExtraHeight={props.aspectRatio ? appBarHeight : undefined}
       style={{ zIndex: props.z, pointerEvents: "auto" }}
       onMouseDown={() => props.focus(props.id)}
-      className={`overflow-hidden ${round} ${minimized}`}
+      className={`overflow-clip ${round} ${minimized}`}
       id={`window-${props.id}`}
     >
       {/* macOS Tahoe Liquid Glass window shell */}

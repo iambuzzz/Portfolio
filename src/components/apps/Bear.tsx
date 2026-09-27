@@ -134,7 +134,7 @@ const Middlebar = ({ items, cur, setContent }: MiddlebarProps) => {
               ? "border-red-500 bg-white dark:bg-gray-900"
               : "border-transparent bg-transparent"
             } hover:(bg-white dark:bg-gray-900)`}
-          onClick={() => setContent(item.id, item.file, index)}
+          onClick={() => setContent(item.id, item.file ?? "", index)}
         >
           <div className="h-8 mt-3 hstack">
             <div className="-mt-1 w-10 vstack text-c-500">
@@ -189,6 +189,11 @@ const fixImageURL = (text: string, contentURL: string): string => {
   return text;
 };
 
+// Notes whose markdown is defined inline in the config (built from the profile).
+const inlineMd: Record<string, string> = Object.fromEntries(
+  bear.flatMap((b) => b.md).filter((m) => m.content !== undefined).map((m) => [m.id, m.content!])
+);
+
 const Content = ({ contentID, contentURL }: ContentProps) => {
   const [storeMd, setStoreMd] = useState<{ [key: string]: string }>({});
   const dark = useStore((state) => state.dark);
@@ -196,6 +201,12 @@ const Content = ({ contentID, contentURL }: ContentProps) => {
   const fetchMarkdown = useCallback(
     (id: string, url: string) => {
       if (!storeMd[id]) {
+        const inline = inlineMd[id];
+        if (inline !== undefined) {
+          storeMd[id] = inline;
+          setStoreMd({ ...storeMd });
+          return;
+        }
         fetch(url)
           .then((response) => response.text())
           .then((text) => {
@@ -234,7 +245,7 @@ const Bear = () => {
     curMidbar: 0,
     midbarList: bear[0].md,
     contentID: bear[0].md[0].id,
-    contentURL: bear[0].md[0].file
+    contentURL: bear[0].md[0].file ?? ""
   });
 
   const setMidBar = (items: BearMdData[], index: number) => {
@@ -243,7 +254,7 @@ const Bear = () => {
       curMidbar: 0,
       midbarList: items,
       contentID: items[0].id,
-      contentURL: items[0].file
+      contentURL: items[0].file ?? ""
     });
   };
 

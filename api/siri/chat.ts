@@ -1,12 +1,12 @@
 import { GROQ_API_URL, groqKey, guard, json } from "../_lib/guard";
+import { SIRI_SYSTEM_PROMPT, SIRI_TOOLS } from "../../src/data/siri";
 
 export const config = { runtime: "edge" };
 
 // Tried in order until one succeeds. Update here when Groq retires a model.
 const CHAT_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
 
-const MAX_MESSAGES = 16;
-const MAX_CHARS = 12_000;
+const MAX_CHARS = 500;
 
 export default async function handler(req: Request): Promise<Response> {
   const blocked = guard(req);
@@ -15,33 +15,32 @@ export default async function handler(req: Request): Promise<Response> {
   const key = groqKey();
   if (!key) return json(503, { error: "Siri is not configured." });
 
-  let body: { messages?: unknown; tools?: unknown };
+  // The browser only sends the visitor's question; the prompt and tools live
+  // here so the key can't be used as a general-purpose chatbot.
+  let text: unknown;
   try {
-    body = await req.json();
+    ({ text } = await req.json());
   } catch {
     return json(400, { error: "Invalid JSON" });
   }
+  if (typeof text !== "string" || !text.trim()) return json(400, { error: "Missing text" });
+  if (text.length > MAX_CHARS) return json(413, { error: "Question too long" });
 
-  const { messages, tools } = body;
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > MAX_MESSAGES) {
-    return json(400, { error: "Invalid messages" });
-  }
-  if (JSON.stringify(messages).length > MAX_CHARS) {
-    return json(413, { error: "Request too large" });
-  }
+  const messages = [
+    { role: "system", content: SIRI_SYSTEM_PROMPT },
+    { role: "user", content: text.trim() }
+  ];
 
   let lastError = "";
   for (const model of CHAT_MODELS) {
-    const payload: Record<string, unknown> = {
+    const payload = {
       model,
       messages,
-      temperature: 0.1,
-      max_tokens: 1024
+      tools: SIRI_TOOLS,
+      tool_choice: "auto",
+      temperature: 0.2,
+      max_tokens: 400
     };
-    if (Array.isArray(tools) && tools.length > 0) {
-      payload.tools = tools;
-      payload.tool_choice = "auto";
-    }
 
     try {
       const res = await fetch(`${GROQ_API_URL}/chat/completions`, {

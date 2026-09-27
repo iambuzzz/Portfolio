@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { appBarHeight } from "~/utils";
 import type { AppsData } from "~/types";
+import { profile } from "~/data/profile";
 
 // Each app is its own chunk, fetched the first time its window opens.
 const Finder = lazy(() => import("~/components/apps/Finder"));
@@ -10,7 +11,6 @@ const Safari = lazy(() => import("~/components/apps/Safari"));
 const VSCode = lazy(() => import("~/components/apps/VSCode"));
 const FaceTime = lazy(() => import("~/components/apps/FaceTime"));
 const Terminal = lazy(() => import("~/components/apps/Terminal"));
-const Spotify = lazy(() => import("~/components/apps/Spotify"));
 const Siri = lazy(() => import("~/components/apps/Siri"));
 const Calculator = lazy(() => import("~/components/apps/Calculator"));
 const SystemSettings = lazy(() => import("~/components/apps/SystemSettings"));
@@ -22,7 +22,6 @@ const Photos = lazy(() => import("~/components/apps/Photos"));
 const Clock = lazy(() => import("~/components/apps/Clock"));
 const Mail = lazy(() => import("~/components/apps/Mail"));
 const AppStore = lazy(() => import("~/components/apps/AppStore"));
-const YouTube = lazy(() => import("~/components/apps/YouTube"));
 
 const apps: AppsData[] = [
   {
@@ -116,20 +115,7 @@ const apps: AppsData[] = [
     desktop: false,
     hideOnMobile: true,
     img: "img/icons/github.png",
-    link: "https://github.com/aakashsharma003/macOS-Portfolio",
-  },
-  {
-    id: "spotify",
-    title: "Spotify",
-    desktop: true,
-    width: 860,
-    height: 500,
-    show: false,
-    hideOnMobile: true,
-    y: -40,
-    titlebar: "transparent",
-    img: "img/icons/spotify.png",
-    content: <Spotify />,
+    link: profile.socials.github,
   },
   {
     id: "siri",
@@ -273,22 +259,6 @@ const apps: AppsData[] = [
     y: 20,
     img: "img/icons/app-store.png",
     content: <AppStore />,
-  },
-  {
-    id: "youtube",
-    title: "YouTube",
-    desktop: true,
-    hideFromDock: true,
-    hideOnMobile: true,
-    width: 900,
-    height: 600,
-    minWidth: 600,
-    minHeight: 400,
-    x: 30,
-    y: -30,
-    titlebar: "transparent",
-    img: "img/icons/YouTube_3I5Pfpsd8t.png",
-    content: <YouTube />,
   },
 ];
 

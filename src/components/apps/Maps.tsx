@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 
 const PLACES = [
-  { id: "1", name: "MBM University", type: "University", lat: 26.285, lng: 73.006, color: "#007AFF" },
-  { id: "2", name: "Jodhpur", type: "City", lat: 26.292, lng: 73.014, color: "#FF9500" },
-  { id: "3", name: "Mehrangarh Fort", type: "Landmark", lat: 26.298, lng: 72.978, color: "#FF3B30" },
-  { id: "4", name: "Umaid Bhawan", type: "Palace", lat: 26.280, lng: 73.022, color: "#AF52DE" },
+  { id: "1", name: "IIIT Kota", type: "University", lat: 25.2138, lng: 75.8648, color: "#007AFF" },
+  { id: "2", name: "Kota, Rajasthan", type: "City", lat: 25.2138, lng: 75.8648, color: "#FF9500" },
+  { id: "3", name: "Jagat Taran Golden Jubilee School", type: "School", lat: 25.4358, lng: 81.8463, color: "#34C759" },
+  { id: "4", name: "Prayagraj, Uttar Pradesh", type: "City", lat: 25.4358, lng: 81.8463, color: "#AF52DE" },
 ];
 
 export default function Maps() {
@@ -203,7 +203,7 @@ export default function Maps() {
               {activePlace.name}
             </div>
             <div style={{ fontSize: "11px", color: "rgba(0,0,0,0.5)" }}>
-              {activePlace.type} · Jodhpur, Rajasthan
+              {activePlace.type}
             </div>
           </div>
           <button

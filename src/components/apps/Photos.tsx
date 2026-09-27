@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { profile } from "~/data/profile";
 
 interface Photo {
   id: string;
@@ -6,27 +7,29 @@ interface Photo {
   label: string;
   date: string;
   liked?: boolean;
+  album?: string;
 }
 
-// Using Picsum for placeholder photos
+// Real images only: certificates now, project screenshots once they're added.
 const PHOTOS: Photo[] = [
-  { id: "1", url: "https://picsum.photos/seed/macos1/400/300", label: "Jodhpur Sunset", date: "Jun 1, 2025" },
-  { id: "2", url: "https://picsum.photos/seed/macos2/400/300", label: "Mehrangarh Fort", date: "May 28, 2025", liked: true },
-  { id: "3", url: "https://picsum.photos/seed/macos3/400/300", label: "Blue City", date: "May 20, 2025" },
-  { id: "4", url: "https://picsum.photos/seed/macos4/400/300", label: "MBM Campus", date: "May 15, 2025", liked: true },
-  { id: "5", url: "https://picsum.photos/seed/macos5/400/300", label: "Umaid Bhawan", date: "May 10, 2025" },
-  { id: "6", url: "https://picsum.photos/seed/macos6/400/300", label: "Desert View", date: "Apr 30, 2025" },
-  { id: "7", url: "https://picsum.photos/seed/macos7/400/300", label: "Portfolio Screenshot", date: "Apr 20, 2025" },
-  { id: "8", url: "https://picsum.photos/seed/macos8/400/300", label: "Coding Session", date: "Apr 10, 2025" },
-  { id: "9", url: "https://picsum.photos/seed/macos9/400/300", label: "Hackathon", date: "Apr 1, 2025" },
+  ...profile.projects.flatMap((p) =>
+    p.screenshots.map((url, i) => ({ id: `${p.id}-${i}`, url, label: p.name, date: p.date, album: "projects" }))
+  ),
+  ...profile.certifications.map((c) => ({
+    id: `cert-${c.id}`,
+    url: c.preview,
+    label: `${c.issuer} — ${c.title}`,
+    date: String(c.year),
+    liked: true,
+    album: "certificates",
+  })),
 ];
 
 const ALBUMS = [
-  { id: "recents", label: "Recents", icon: "i-ph:clock", count: 9 },
-  { id: "favorites", label: "Favourites", icon: "i-ph:heart-fill", count: 2 },
-  { id: "jodhpur", label: "Jodhpur", icon: "i-ph:castle-turret", count: 4 },
-  { id: "projects", label: "Projects", icon: "i-ph:laptop", count: 2 },
-  { id: "people", label: "People", icon: "i-ph:users", count: 3 },
+  { id: "recents", label: "Recents", icon: "i-ph:clock", count: PHOTOS.length },
+  { id: "favorites", label: "Favourites", icon: "i-ph:heart-fill", count: PHOTOS.filter((p) => p.liked).length },
+  { id: "certificates", label: "Certificates", icon: "i-ph:certificate", count: PHOTOS.filter((p) => p.album === "certificates").length },
+  { id: "projects", label: "Projects", icon: "i-ph:laptop", count: PHOTOS.filter((p) => p.album === "projects").length },
 ];
 
 export default function Photos() {
@@ -36,7 +39,11 @@ export default function Photos() {
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null);
 
   const displayed =
-    activeAlbum === "favorites" ? photos.filter((p) => p.liked) : photos;
+    activeAlbum === "favorites"
+      ? photos.filter((p) => p.liked)
+      : activeAlbum === "recents"
+        ? photos
+        : photos.filter((p) => p.album === activeAlbum);
 
   const toggleLike = (id: string) => {
     setPhotos((prev) =>

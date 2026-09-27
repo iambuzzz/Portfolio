@@ -1,5 +1,6 @@
 import React from "react";
 import terminal from "~/configs/terminal";
+import { profile } from "~/data/profile";
 import type { TerminalData } from "~/types";
 
 const CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -105,7 +106,11 @@ export default class Terminal extends React.Component<{}, TerminalState> {
       ls: this.ls,
       cat: this.cat,
       clear: this.clear,
-      help: this.help
+      help: this.help,
+      whoami: this.whoami,
+      resume: this.resume,
+      open: this.open,
+      sudo: this.sudo
     };
   }
 
@@ -214,6 +219,60 @@ export default class Terminal extends React.Component<{}, TerminalState> {
     this.reset();
   };
 
+  whoami = () => {
+    this.generateResultRow(
+      this.curInputTimes,
+      <div className="py-1">
+        <div className="text-yellow-200">{profile.name}</div>
+        <div>{profile.role}</div>
+        <div className="text-gray-400">{profile.location}</div>
+      </div>
+    );
+  };
+
+  resume = () => {
+    const link = document.createElement("a");
+    link.href = profile.resume;
+    link.download = profile.resumeFileName;
+    link.click();
+    this.generateResultRow(this.curInputTimes, <span>Downloading {profile.resumeFileName}…</span>);
+  };
+
+  open = (args?: string) => {
+    const project = profile.projects.find((p) => p.id === args?.toLowerCase());
+    if (!project) {
+      this.generateResultRow(
+        this.curInputTimes,
+        <span>
+          usage: open {"<project>"} — one of: {profile.projects.map((p) => p.id).join(", ")}
+        </span>
+      );
+      return;
+    }
+    window.open(project.live, "_blank", "noopener");
+    this.generateResultRow(this.curInputTimes, <span>Opening {project.live}</span>);
+  };
+
+  sudo = (args?: string) => {
+    if (args === "hire-me") {
+      this.generateResultRow(
+        this.curInputTimes,
+        <span className="text-green-300">
+          [sudo] access granted. Reach me at{" "}
+          <a className="text-blue-300" href={`mailto:${profile.email}`}>
+            {profile.email}
+          </a>{" "}
+          — or type `resume` to grab my résumé.
+        </span>
+      );
+    } else {
+      this.generateResultRow(
+        this.curInputTimes,
+        <span>{`${profile.handle} is not in the sudoers file. This incident will be reported.`}</span>
+      );
+    }
+  };
+
   help = () => {
     const help = (
       <ul className="list-disc ml-6 pb-1.5">
@@ -228,6 +287,16 @@ export default class Terminal extends React.Component<{}, TerminalState> {
         <li>
           <span text-red-400>ls</span> - See files and directories in the current
           directory
+        </li>
+        <li>
+          <span text-red-400>whoami</span> - Who am I?
+        </li>
+        <li>
+          <span text-red-400>resume</span> - Download my résumé
+        </li>
+        <li>
+          <span text-red-400>open {"<project>"}</span> - Open a project live (
+          {profile.projects.map((p) => p.id).join(", ")})
         </li>
         <li>
           <span text-red-400>clear</span> - Clear the screen
@@ -342,7 +411,7 @@ export default class Terminal extends React.Component<{}, TerminalState> {
       <div key={`terminal-input-row-${id}`} flex>
         <div className="w-max hstack space-x-1.5">
           <span text-yellow-200>
-            @demaxxer <span text-green-300>{this.getCurDirName()}</span>
+            {profile.handle}@portfolio <span text-green-300>{this.getCurDirName()}</span>
           </span>
           <span text-red-400>{">"}</span>
         </div>

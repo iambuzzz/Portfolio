@@ -1,31 +1,135 @@
 import type { BearData } from "~/types";
+import { profile } from "~/data/profile";
+
+const { socials } = profile;
+
+const aboutMe = `# ${profile.name}
+
+**${profile.role}**
+📍 ${profile.location}
+
+${profile.summary}
+
+## Contact
+
+- Email: [${profile.email}](mailto:${profile.email})
+- GitHub: [@${profile.handle}](${socials.github})
+- LinkedIn: [${profile.name}](${socials.linkedin})
+- LeetCode: [iambuzz](${socials.leetcode})
+- CodeChef: [iambuzz](${socials.codechef})
+- Codolio: [iambuzz](${socials.codolio})
+
+## Résumé
+
+[Download my résumé (PDF)](${profile.resume})
+`;
+
+const education = `# Education
+
+${profile.education
+  .map(
+    (e) => `## ${e.school}
+
+${e.place}${e.period ? ` · ${e.period}` : ""}
+
+${e.degree}
+
+**${e.score}**`
+  )
+  .join("\n\n")}
+`;
+
+const skills = `# Technical Skills
+
+${Object.entries(profile.skills)
+  .map(([group, items]) => `## ${group}\n\n${items.map((i) => `\`${i}\``).join(" ")}`)
+  .join("\n\n")}
+`;
+
+const achievements = `# Achievements
+
+${profile.achievements.map((a) => `- ${a}`).join("\n")}
+
+Profiles: [LeetCode](${socials.leetcode}) · [CodeChef](${socials.codechef}) · [Codolio](${socials.codolio})
+`;
+
+const certifications = `# Courses & Certifications
+
+${profile.certifications
+  .map(
+    (c) => `## ${c.title}
+
+${c.issuer} · ${c.year}
+
+[![${c.title}](${c.preview})](${c.file})
+
+[Open certificate](${c.file}) · [Verify original](${c.url})`
+  )
+  .join("\n\n")}
+`;
+
+const interests = `# Interests
+
+${profile.interests.map((i) => `- **${i.title}:** ${i.text}`).join("\n")}
+`;
+
+const aboutSite = `# About This Site
+
+My portfolio, built as a macOS Tahoe desktop that runs in the browser.
+
+Built with React, TypeScript, Zustand, UnoCSS, Framer Motion and Vite, and deployed on Vercel.
+
+Try the **Terminal** (\`help\`, \`whoami\`, \`open devtinder\`) or ask **Siri** about me.
+`;
 
 const bear: BearData[] = [
   {
     id: "profile",
     title: "Profile",
-    icon: "i-ph:paw-print",
+    icon: "i-ph:user-circle",
     md: [
+      { id: "about-me", title: "About Me", icon: "i-ph:hand-waving", excerpt: profile.role, content: aboutMe },
       {
-        id: "about-me",
-        title: "About Me",
-        file: "markdown/about-me.md",
-        icon: "i-ph:shield-star",
-        excerpt: "Hey there! I'm the one who is building his own universe..."
+        id: "education",
+        title: "Education",
+        icon: "i-ph:graduation-cap",
+        excerpt: `${profile.education[0].degree}, IIIT Kota`,
+        content: education
       },
       {
-        id: "github-stats",
-        title: "Github Stats",
-        file: "markdown/github-stats.md",
-        icon: "i-fa6-brands:github",
-        excerpt: "Here are some status about my github account..."
+        id: "skills",
+        title: "Skills",
+        icon: "i-ph:code",
+        excerpt: "Languages, frameworks, databases and tools I work with.",
+        content: skills
+      },
+      {
+        id: "achievements",
+        title: "Achievements",
+        icon: "i-ph:trophy",
+        excerpt: profile.achievements[0],
+        content: achievements
+      },
+      {
+        id: "certifications",
+        title: "Certifications",
+        icon: "i-ph:certificate",
+        excerpt: profile.certifications.map((c) => c.issuer).join(" · "),
+        content: certifications
+      },
+      {
+        id: "interests",
+        title: "Interests",
+        icon: "i-ph:music-notes",
+        excerpt: profile.interests.map((i) => i.title).join(", "),
+        content: interests
       },
       {
         id: "about-site",
         title: "About This Site",
-        file: "markdown/about-site.md",
         icon: "i-ph:browser",
-        excerpt: "Something about this personal portfolio site..."
+        excerpt: "How this portfolio is built.",
+        content: aboutSite
       }
     ]
   },
@@ -33,56 +137,26 @@ const bear: BearData[] = [
     id: "project",
     title: "Projects",
     icon: "i-ph:git-branch",
-    md: [
-      {
-        id: "paytm-web",
-        title: "PaytmWeb",
-        file: "https://raw.githubusercontent.com/aakashsharma003/PaytmWeb/main/README.md",
-        icon: "i-ph:credit-card",
-        excerpt: "A demonstration Project For Paytm transactions...",
-        link: "https://github.com/aakashsharma003/paytm-web"
-      },
-      {
-        id: "portfolio-macos",
-        title: "Portfolio macOS",
-        file: "https://raw.githubusercontent.com/aakashsharma003/macOS-Portfolio/main/README.md",
-        icon: "i-ph:desktop",
-        excerpt: "My portfolio website simulating macOS's GUI...",
-        link: "https://github.com/aakashsharma003/macos-portfolio"
-      },
-      {
-        id: "medium-2.0",
-        title: "Medium 2.0",
-        file: "https://raw.githubusercontent.com/aakashsharma003/Medium/main/README.md",
-        icon: "i-ph:globe",
-        excerpt: "A medium modified version with serverless backend...",
-        link: "https://github.com/aakashsharma003/Medium"
-      },
-      {
-        id: "attendance-web",
-        title: "Mbm Attendance Web",
-        file: "https://raw.githubusercontent.com/aakashsharma003/Mbm-Attendance-Application/main/README.md",
-        icon: "i-ph:clipboard-text",
-        excerpt: "A attendance website for mbm university...",
-        link: "https://github.com/aakashsharma003/Mbm-Attendance-Application"
-      },
-      {
-        id: "aero-pay",
-        title: "AeroPay",
-        file: "https://raw.githubusercontent.com/aakashsharma003/AeroPay/main/README.md",
-        icon: "i-ph:money",
-        excerpt: "A payment transactions simulator...",
-        link: "https://github.com/aakashsharma003/AeroPay"
-      },
-      {
-        id: "rasl",
-        title: "rasl",
-        file: "https://raw.githubusercontent.com/Open-Source-Collab-Community/rasl/main/README.md",
-        icon: "i-ph:headphones",
-        excerpt: "A audio streaming library...",
-        link: "https://github.com/Open-Source-Collab-Community/rasl"
-      }
-    ]
+    md: profile.projects.map((p) => ({
+      id: `project-${p.id}`,
+      title: p.name,
+      icon: "i-ph:rocket-launch",
+      excerpt: p.tagline,
+      link: p.github,
+      content: `# ${p.name}
+
+${p.tagline}
+
+**Stack:** ${p.stack.join(" · ")}
+**Date:** ${p.date}
+
+[Live demo](${p.live}) · [GitHub](${p.github})
+
+## Highlights
+
+${p.highlights.map((h) => `- ${h}`).join("\n")}
+${p.screenshots.length ? `\n## Screenshots\n\n${p.screenshots.map((s) => `![${p.name}](${s})`).join("\n\n")}\n` : ""}`
+    }))
   }
 ];
 

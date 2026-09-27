@@ -6,15 +6,53 @@
     <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="light dark" />
 
-    <title>Ambuj — Portfolio</title>
-    <meta name="description" content="Ambuj's portfolio — an interactive macOS Tahoe desktop in the browser." />
+    <title>Ambuj Jaiswal — Full-Stack Developer</title>
+    <meta
+      name="description"
+      content="Ambuj Jaiswal — Software Engineer and Full-Stack Developer (CSE, IIIT Kota '27). Projects in MERN, Next.js, Kafka, gRPC and Redis, presented as an interactive macOS desktop."
+    />
+    <meta name="author" content="Ambuj Jaiswal" />
+
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" content="Ambuj Jaiswal — Full-Stack Developer" />
+    <meta
+      property="og:description"
+      content="Software Engineer | Full-Stack Developer | DSA & System Design Enthusiast. Explore my projects on an interactive macOS desktop."
+    />
+    <meta name="twitter:card" content="summary" />
 
     <link rel="icon" href="/logo/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/logo/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Ambuj Jaiswal",
+        "jobTitle": "Software Engineer",
+        "email": "mailto:ambujjais1@gmail.com",
+        "alumniOf": "Indian Institute of Information Technology Kota",
+        "address": { "@type": "PostalAddress", "addressLocality": "Kota", "addressRegion": "Rajasthan", "addressCountry": "IN" },
+        "sameAs": [
+          "https://github.com/iambuzzz",
+          "https://www.linkedin.com/in/ambuj-jaiswal-68385a290",
+          "https://leetcode.com/u/iambuzz/",
+          "https://www.codechef.com/users/iambuzz",
+          "https://codolio.com/profile/iambuzz"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Plain summary for crawlers and no-JS visitors; hidden once the app renders. -->
+    <noscript>
+      <h1>Ambuj Jaiswal</h1>
+      <p>Software Engineer | Full-Stack Developer | DSA &amp; System Design Enthusiast. B.Tech CSE, IIIT Kota (2023–2027).</p>
+      <p>Projects: DevTinder (MERN, Kafka, gRPC, Redis, AWS), BuddyBoard (Next.js, Firebase), FoodieHub (React, Redux Toolkit).</p>
+      <p><a href="/resume.pdf">Résumé (PDF)</a> · <a href="mailto:ambujjais1@gmail.com">ambujjais1@gmail.com</a> · <a href="https://github.com/iambuzzz">GitHub</a> · <a href="https://www.linkedin.com/in/ambuj-jaiswal-68385a290">LinkedIn</a></p>
+    </noscript>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

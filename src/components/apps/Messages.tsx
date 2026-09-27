@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { profile } from "~/data/profile";
 
 interface Message {
   id: string;
@@ -18,54 +19,56 @@ interface Conversation {
   online?: boolean;
 }
 
+// Turn bare URLs in a message into links.
+const linkify = (text: string) =>
+  text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noreferrer" style={{ color: "#007AFF", textDecoration: "underline" }}>
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+
+// Every message here comes from the profile — no invented chats.
 const CONVERSATIONS: Conversation[] = [
   {
-    id: "1",
-    name: "Recruiter @ Google",
-    avatar: "🏢",
-    preview: "We'd love to schedule a call!",
+    id: "intro",
+    name: profile.name,
+    avatar: "AJ",
+    preview: "Hey! 👋 Thanks for visiting.",
     time: "Now",
-    unread: 2,
+    unread: 3,
     online: true,
     messages: [
-      { id: "1", text: "Hi! We came across your portfolio and were really impressed.", from: "them", time: "10:30 AM" },
-      { id: "2", text: "Thanks! I'm glad you liked it.", from: "me", time: "10:32 AM" },
-      { id: "3", text: "We'd love to schedule a call to discuss opportunities at Google.", from: "them", time: "10:33 AM" },
-      { id: "4", text: "We'd love to schedule a call!", from: "them", time: "10:35 AM" },
+      { id: "1", text: `Hey! 👋 I'm ${profile.firstName} — ${profile.role}.`, from: "them", time: "Now" },
+      { id: "2", text: profile.summary, from: "them", time: "Now" },
+      { id: "3", text: `Want to talk? Email me at ${profile.email} — or ask Siri anything about me.`, from: "them", time: "Now" },
     ],
   },
   {
-    id: "2",
-    name: "Team SkillExchange",
-    avatar: "i-ph:lightbulb",
-    preview: "PR #42 merged successfully",
-    time: "2m",
-    messages: [
-      { id: "1", text: "Hey, the new feature looks great!", from: "them", time: "9:00 AM" },
-      { id: "2", text: "Thanks! Just pushed the Liquid Glass update.", from: "me", time: "9:05 AM" },
-      { id: "3", text: "PR #42 merged successfully", from: "them", time: "9:10 AM" },
-    ],
+    id: "projects",
+    name: "Projects",
+    avatar: "i-ph:rocket-launch",
+    preview: profile.projects.map((p) => p.name).join(", "),
+    time: profile.projects[0].date,
+    messages: profile.projects.map((p, i) => ({
+      id: String(i + 1),
+      text: `${p.name}: ${p.tagline} ${p.live}`,
+      from: "them" as const,
+      time: p.date,
+    })),
   },
   {
-    id: "3",
-    name: "Mom",
-    avatar: "👩",
-    preview: "Beta aa ja khaana thanda ho raha hai",
-    time: "1h",
+    id: "coding",
+    name: "Coding Profiles",
+    avatar: "i-ph:code",
+    preview: profile.achievements[0],
+    time: "Now",
     messages: [
-      { id: "1", text: "Beta aa ja khaana thanda ho raha hai", from: "them", time: "8:00 AM" },
-      { id: "2", text: "Coming in 5 min maa 😅", from: "me", time: "8:02 AM" },
-    ],
-  },
-  {
-    id: "4",
-    name: "GitHub Notifications",
-    avatar: "🐙",
-    preview: "New star on macOS-Portfolio!",
-    time: "3h",
-    messages: [
-      { id: "1", text: "⭐ aakashsharma003/macOS-Portfolio received a new star!", from: "them", time: "7:00 AM" },
-      { id: "2", text: "🔔 New issue opened: 'Feature request: Dark mode improvements'", from: "them", time: "7:30 AM" },
+      ...profile.achievements.map((a, i) => ({ id: String(i + 1), text: a, from: "them" as const, time: "Now" })),
+      { id: "links", text: `LeetCode: ${profile.socials.leetcode}\nCodeChef: ${profile.socials.codechef}\nCodolio: ${profile.socials.codolio}`, from: "them", time: "Now" },
     ],
   },
 ];
@@ -376,9 +379,11 @@ export default function MessagesApp() {
                     fontSize: "14px",
                     lineHeight: "1.4",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
                   }}
                 >
-                  {msg.text}
+                  {linkify(msg.text)}
                 </div>
               </motion.div>
             ))}

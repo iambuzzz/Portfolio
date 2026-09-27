@@ -287,7 +287,7 @@ export default function Desktop(props: MacActions) {
 
   return (
     <div
-      className="size-full overflow-hidden bg-center bg-cover"
+      className="size-full overflow-clip bg-center bg-cover"
       style={bgStyle}
       onContextMenu={handleContextMenu}
     >

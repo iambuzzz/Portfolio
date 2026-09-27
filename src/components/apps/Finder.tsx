@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowSize } from "~/hooks/useWindowSize";
+import { profile } from "~/data/profile";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type ViewMode = "icons" | "list" | "columns";
@@ -16,9 +17,22 @@ interface FileItem {
   icon: string;
   color?: string;
   children?: FileItem[];
+  /** Opened in a new tab on double-click. */
+  url?: string;
 }
 
-// ─── Mock Filesystem ─────────────────────────────────────────────────────────
+// ─── Filesystem (built from the profile) ─────────────────────────────────────
+const resumeFile: FileItem = {
+  id: "resume",
+  name: profile.resumeFileName,
+  kind: "file",
+  ext: "pdf",
+  size: "1.5 MB",
+  date: "2026",
+  icon: "/img/icons/sf-icons/doc.svg",
+  url: profile.resume,
+};
+
 const FILESYSTEM: Record<string, FileItem[]> = {
   home: [
     {
@@ -28,69 +42,66 @@ const FILESYSTEM: Record<string, FileItem[]> = {
       date: "Today",
       icon: "/img/icons/sf-icons/desktop.svg",
       color: "#4A90E2",
-      children: [
-        { id: "readme", name: "README.md", kind: "file", ext: "md", size: "2 KB", date: "Today", icon: "/img/icons/sf-icons/doc.svg" },
-        { id: "notes", name: "notes.txt", kind: "file", ext: "txt", size: "1 KB", date: "Yesterday", icon: "/img/icons/sf-icons/doc.svg" },
-      ],
+      children: [{ ...resumeFile, id: "desktop-resume" }],
     },
     {
       id: "documents",
       name: "Documents",
       kind: "folder",
-      date: "Yesterday",
+      date: "Today",
       icon: "/img/icons/sf-icons/folder.svg",
       color: "#F5A623",
       children: [
-        { id: "resume", name: "Akash_Resume.pdf", kind: "file", ext: "pdf", size: "340 KB", date: "Jun 1", icon: "/img/icons/sf-icons/doc.svg" },
-        { id: "cover", name: "CoverLetter.docx", kind: "file", ext: "docx", size: "28 KB", date: "Jun 2", icon: "/img/icons/sf-icons/doc.svg" },
-        { id: "projects-folder", name: "Projects", kind: "folder", date: "Jun 3", icon: "/img/icons/sf-icons/folder.svg", color: "#F5A623" },
+        resumeFile,
+        {
+          id: "certificates",
+          name: "Certificates",
+          kind: "folder",
+          date: String(profile.certifications[profile.certifications.length - 1].year),
+          icon: "/img/icons/sf-icons/folder.svg",
+          color: "#F5A623",
+          children: profile.certifications.map((c) => ({
+            id: `cert-${c.id}`,
+            name: `${c.issuer} – ${c.title}.${c.file.split(".").pop()}`,
+            kind: "file" as const,
+            ext: c.file.split(".").pop(),
+            date: String(c.year),
+            icon: c.file.endsWith(".pdf") ? "/img/icons/sf-icons/doc.svg" : "/img/icons/sf-icons/image.svg",
+            url: c.file,
+          })),
+        },
       ],
     },
     {
-      id: "downloads",
-      name: "Downloads",
+      id: "projects",
+      name: "Projects",
       kind: "folder",
-      date: "Today",
-      icon: "/img/icons/sf-icons/download.svg",
-      color: "#7B68EE",
-      children: [
-        { id: "react-zip", name: "react-18.zip", kind: "file", ext: "zip", size: "2.1 MB", date: "Today", icon: "/img/icons/sf-icons/doc.svg" },
-        { id: "wallpaper", name: "macOS_Tahoe.jpg", kind: "file", ext: "jpg", size: "4.8 MB", date: "Today", icon: "/img/icons/sf-icons/image.svg" },
-      ],
-    },
-    {
-      id: "pictures",
-      name: "Pictures",
-      kind: "folder",
-      date: "Jun 3",
-      icon: "/img/icons/sf-icons/image.svg",
-      color: "#FF6B6B",
-      children: [
-        { id: "avatar", name: "avatar.png", kind: "file", ext: "png", size: "120 KB", date: "May 28", icon: "/img/icons/sf-icons/image.svg" },
-      ],
+      date: profile.projects[0].date,
+      icon: "/img/icons/sf-icons/folder.svg",
+      color: "#34C759",
+      children: profile.projects.map((p) => ({
+        id: `project-${p.id}`,
+        name: p.name,
+        kind: "folder" as const,
+        date: p.date,
+        icon: "/img/icons/sf-icons/folder.svg",
+        color: "#34C759",
+        children: [
+          { id: `${p.id}-live`, name: `${p.name} — Live Demo`, kind: "file" as const, ext: "webloc", date: p.date, icon: "/img/icons/safari.png", url: p.live },
+          { id: `${p.id}-github`, name: `${p.name} — GitHub`, kind: "file" as const, ext: "webloc", date: p.date, icon: "/img/icons/sf-icons/github.svg", url: p.github },
+        ],
+      })),
     },
     {
       id: "music",
       name: "Music",
       kind: "folder",
-      date: "Jun 2",
+      date: "Today",
       icon: "/img/icons/sf-icons/sound.svg",
       color: "#FF2D55",
       children: [
-        { id: "faded", name: "faded.mp3", kind: "file", ext: "mp3", size: "3.5 MB", date: "May 20", icon: "/img/icons/sf-icons/sound.svg" },
-        { id: "samantha", name: "Samantha Legacy.wav", kind: "file", ext: "wav", size: "280 KB", date: "Jun 1", icon: "/img/icons/sf-icons/sound.svg" },
-      ],
-    },
-    {
-      id: "repos",
-      name: "Repositories",
-      kind: "folder",
-      date: "Today",
-      icon: "/img/icons/sf-icons/desktop.svg",
-      color: "#34C759",
-      children: [
-        { id: "macos-portfolio", name: "macOS-Portfolio", kind: "folder", date: "Today", icon: "/img/icons/sf-icons/folder.svg", color: "#34C759" },
-        { id: "lib-project", name: "lib", kind: "folder", date: "Jun 3", icon: "/img/icons/sf-icons/folder.svg", color: "#34C759" },
+        { id: "faded", name: "faded.m4a", kind: "file", ext: "m4a", size: "2.6 MB", date: "Today", icon: "/img/icons/sf-icons/sound.svg", url: "/music/faded.m4a" },
+        { id: "samantha", name: "Samantha (Legacy).m4a", kind: "file", ext: "m4a", size: "42 KB", date: "Today", icon: "/img/icons/sf-icons/sound.svg", url: "/music/Samantha (Legacy)-2024_08_12-6.m4a" },
       ],
     },
   ],
@@ -107,11 +118,11 @@ const SIDEBAR_SECTIONS = [
   {
     title: "Favorites",
     items: [
-      { id: "home", label: "Applications", icon: "/img/icons/sf-icons/applications.svg" },
+      { id: "home", label: profile.firstName, icon: "/img/icons/sf-icons/folder-user.svg" },
       { id: "desktop", label: "Desktop", icon: "/img/icons/sf-icons/desktop.svg", parent: "home" },
       { id: "documents", label: "Documents", icon: "/img/icons/sf-icons/doc.svg", parent: "home" },
-      { id: "downloads", label: "Downloads", icon: "/img/icons/sf-icons/download.svg", parent: "home" },
-      { id: "pictures", label: "Screenshots", icon: "/img/icons/sf-icons/image.svg", parent: "home" },
+      { id: "projects", label: "Projects", icon: "/img/icons/sf-icons/folder.svg", parent: "home" },
+      { id: "music", label: "Music", icon: "/img/icons/sf-icons/sound.svg", parent: "home" },
     ],
   },
   {
@@ -144,7 +155,7 @@ const SIDEBAR_SECTIONS = [
 const FileIcon = ({ item, size = 56 }: { item: FileItem; size?: number }) => {
   if (item.kind === "folder") {
     let customImg = "/img/icons/folder-generic.png";
-    if (item.id === "repos" || item.id === "projects-folder") {
+    if (item.id === "projects") {
       customImg = "/img/icons/folder-dock.png";
     } else if (item.id === "home") {
       customImg = "/img/icons/folder-home.png";
@@ -222,6 +233,8 @@ export default function Finder() {
       setPathStack((p) => [...p, item.id]);
       setLocation(item.id);
       setSelected(null);
+    } else if (item.url) {
+      window.open(item.url, "_blank", "noopener");
     }
   };
 
@@ -236,7 +249,7 @@ export default function Finder() {
   const goForward = () => { };
 
   const locationLabel = () => {
-    if (location === "home") return "Akash";
+    if (location === "home") return profile.firstName;
     const item = FILESYSTEM.home.find((f) => f.id === location);
     if (item) return item.name;
     for (const root of FILESYSTEM.home) {
@@ -695,7 +708,7 @@ export default function Finder() {
         {pathStack.map((seg, i) => {
           const label =
             seg === "home"
-              ? "Akash"
+              ? profile.firstName
               : FILESYSTEM.home.find((f) => f.id === seg)?.name ?? seg;
           const isActive = i === pathStack.length - 1;
           return (
@@ -867,7 +880,7 @@ export default function Finder() {
         {pathStack.map((seg, i) => {
           const label =
             seg === "home"
-              ? "Akash"
+              ? profile.firstName
               : FILESYSTEM.home.find((f) => f.id === seg)?.name ??
               seg;
           return (

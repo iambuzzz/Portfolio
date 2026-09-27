@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { profile } from "~/data/profile";
 
 interface MailMessage {
   id: string;
@@ -15,59 +16,48 @@ interface MailMessage {
 
 const MESSAGES: MailMessage[] = [
   {
-    id: "1",
-    from: "GitHub",
-    fromEmail: "noreply@github.com",
-    subject: "Your pull request was merged",
-    preview: "Congratulations! Your PR #42 'feat: macOS 26 Tahoe UI' has been merged into main.",
-    body: "Congratulations! Your PR #42 'feat: macOS 26 Tahoe UI' has been merged into main.\n\nChanges included:\n• Liquid Glass design system\n• Dynamic Island component\n• New app icons\n• Redesigned dock\n\nView the merged PR on GitHub.",
-    time: "10:42 AM",
-    unread: true,
-    avatar: "🐙",
-  },
-  {
-    id: "2",
-    from: "Vercel",
-    fromEmail: "noreply@vercel.com",
-    subject: "Deployment successful — portfolio",
-    preview: "Your project portfolio has been deployed to production.",
-    body: "Your project portfolio has been deployed to production.\n\nDeployment URL: https://portfolio.vercel.app\nBranch: main\nCommit: e160e02\n\nThis deployment is now live.",
-    time: "10:38 AM",
-    unread: true,
-    avatar: "▲",
-  },
-  {
-    id: "3",
-    from: "Recruiter @ Google",
-    fromEmail: "recruiter@google.com",
-    subject: "Exciting opportunity — Software Engineer",
-    preview: "Hi Akash, I came across your portfolio and was impressed by your work.",
-    body: "Hi Akash,\n\nI came across your portfolio and was really impressed by your macOS-style portfolio project — the attention to detail with the Liquid Glass UI is exceptional.\n\nWe have an exciting Software Engineer opening at Google that I think would be a great fit. Would you be open to a quick call this week?\n\nBest,\nThe Google Recruiting Team",
-    time: "9:15 AM",
+    id: "welcome",
+    from: profile.name,
+    fromEmail: profile.email,
+    subject: "Thanks for stopping by 👋",
+    preview: `Hi! I'm ${profile.firstName} — ${profile.role}.`,
+    body: `Hi there,
+
+Thanks for exploring my portfolio! I'm ${profile.name}, ${profile.role}.
+
+${profile.summary}
+
+You can reach me at:
+• Email: ${profile.email}
+• GitHub: ${profile.socials.github}
+• LinkedIn: ${profile.socials.linkedin}
+
+My résumé is in Finder, or just ask Siri.
+
+— ${profile.firstName}`,
+    time: "Now",
     unread: true,
     starred: true,
-    avatar: "G",
+    avatar: "AJ",
   },
-  {
-    id: "4",
-    from: "Akash Sharma",
-    fromEmail: "aakashsharma003@gmail.com",
-    subject: "Portfolio notes",
-    preview: "Things to finish: Liquid Glass polish, macOS 26 branding update, new apps...",
-    body: "Things to finish:\n• Liquid Glass polish\n• macOS 26 branding update\n• Add Mail + App Store to dock\n• Improve launchpad grid\n• Dynamic Island interactions",
-    time: "Yesterday",
-    avatar: "A",
-  },
-  {
-    id: "5",
-    from: "npm",
-    fromEmail: "npm@npmjs.com",
-    subject: "Security alert: 0 vulnerabilities found",
-    preview: "Your project audit found no issues. Everything looks good.",
-    body: "Your weekly npm audit found:\n\n✓ 0 vulnerabilities\n✓ All packages up to date\n✓ No deprecated packages\n\nKeep up the great work!",
-    time: "Jun 4",
-    avatar: "i-ph:envelope-simple",
-  },
+  ...profile.projects.map((p, i) => ({
+    id: `project-${p.id}`,
+    from: profile.name,
+    fromEmail: profile.email,
+    subject: `Project: ${p.name}`,
+    preview: p.tagline,
+    body: `${p.tagline}
+
+Stack: ${p.stack.join(", ")}
+
+${p.highlights.map((h) => `• ${h}`).join("\n")}
+
+Live: ${p.live}
+GitHub: ${p.github}`,
+    time: p.date,
+    unread: i === 0,
+    avatar: "AJ",
+  })),
 ];
 
 const FOLDERS = ["Inbox", "Sent", "Drafts", "Starred", "Trash"];

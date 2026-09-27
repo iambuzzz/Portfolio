@@ -1,8 +1,9 @@
 import type { UserData } from "~/types";
+import { profile } from "~/data/profile";
 
 const user: UserData = {
-  name: "Akash",
-  avatar: "/logo/launchpad.png",
+  name: profile.name,
+  avatar: profile.avatar,
   password: ""
 };
 
