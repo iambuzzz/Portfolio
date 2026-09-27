@@ -587,22 +587,15 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   }, []);
 
   //  Auto-start on mount 
-  const mountedRef = useRef(false);
+  // Start listening when Siri opens. Deferred and cancelled in cleanup, so a
+  // StrictMode (dev) unmount/remount can't leave it stuck on "Listening…".
   useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      // When Siri is opened from the dock, start listening.
-      if (phase === "idle") {
-        handleClick();
-      }
-    }
-
+    const t = setTimeout(() => handleClickRef.current(), 0);
     return () => {
-      // Stop the mic when Siri closes.
+      clearTimeout(t);
       cancelListening();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cancelListening]);
 
   //  Click handler: play siri.mp3, then start listening 
   const handleClick = useCallback(async () => {
@@ -620,12 +613,18 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       const lid = listenIdRef.current;
       await playSiriSound();
       // Typed a question (or closed Siri) while the chime was playing.
-      if (lid !== listenIdRef.current) return;
+      if (lid !== listenIdRef.current) {
+        setPhase((p) => (p === "recording" ? "idle" : p));
+        return;
+      }
 
       if (useBrowserSTT) startBrowserSTT();
       else await startWhisperSTT();
     }
   }, [phase, useBrowserSTT, startBrowserSTT, stopBrowserSTT, startWhisperSTT, stopWhisperSTT, playSiriSound, stopSpeaking]);
+
+  const handleClickRef = useRef(handleClick);
+  handleClickRef.current = handleClick;
 
   //  Display 
   let statusText = "";
