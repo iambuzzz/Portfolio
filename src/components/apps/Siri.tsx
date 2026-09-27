@@ -74,7 +74,6 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   const recordStartTimeRef = useRef<number>(0);
   const vadLoopRef = useRef<number | null>(null);
 
-  const apiKey = (import.meta.env.VITE_GROQ_API_KEY as string) || "";
   // Always use Whisper (MediaRecorder + Groq API) — works in all browsers.
   // The native SpeechRecognition API is Chrome/Edge-only, so we skip it.
   const useBrowserSTT = false;
@@ -313,7 +312,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       ];
 
       // console.log("[Agent] Calling Groq with:", userText);
-      const data = await getGroqChatCompletion(messages, apiKey, TOOLS);
+      const data = await getGroqChatCompletion(messages, TOOLS);
       const msg = data.choices[0].message;
       // console.log("[Agent] LLM response:", JSON.stringify(msg, null, 2));
 
@@ -365,7 +364,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       setResponseText(SIRI_FALLBACK);
       speakText(SIRI_FALLBACK);
     }
-  }, [apiKey, executeTool, speakText]);
+  }, [executeTool, speakText]);
 
   //  Handle text input 
   const handleTextInput = useCallback(async (text: string) => {
@@ -474,7 +473,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
           return;
         }
         try {
-          const text = await transcribeAudio(blob, apiKey);
+          const text = await transcribeAudio(blob);
           await handleTranscription(text);
         } catch (err: any) {
           // console.error("[Whisper] Error:", err);
@@ -538,7 +537,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       setResponseText("Microphone access denied.");
       setPhase("error");
     }
-  }, [apiKey, handleTranscription]);
+  }, [handleTranscription]);
 
   const stopWhisperSTT = useCallback(() => {
     // Stop VAD loop

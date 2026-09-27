@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "dev": "vite --host",
     "lint": "eslint .",
+    "optimize": "node scripts/optimize-assets.mjs",
     "prepare": "husky",
-    "serve": "vite preview --host"
+    "serve": "vite preview --host",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@milkdown/core": "^7.3.6",
