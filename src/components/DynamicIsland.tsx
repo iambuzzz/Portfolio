@@ -1,279 +1,199 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
-import { useNowPlaying } from "~/stores/music";
-import { useAudioContext } from "~/context/AudioContext";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useShallow } from "zustand/react/shallow";
+import { useCurrentTrack, useMusicStore } from "~/stores/music";
 
-type IslandState = "idle" | "compact" | "expanded";
-type NotifType = "generic" | "music" | "appLaunch" | "timer";
+// Menu-bar "Dynamic Island". Idle it's a small pill with a camera dot; while
+// music plays it shows the cover and a level meter; click to open the
+// Now Playing controls. Sizes are explicit numbers (never "auto") so the
+// spring can't get stuck half-way when clicked mid-animation.
 
-interface IslandNotif {
-  message: string;
-  type: NotifType;
-  timerEnd?: number;
-}
+const SIZES = {
+  idle: { width: 126, height: 32, radius: 16 },
+  playing: { width: 200, height: 32, radius: 16 },
+  open: { width: 360, height: 104, radius: 26 }
+};
 
-interface DynamicIslandProps {
-  currentApp?: string;
-}
+const fmt = (s: number) => (s && isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00");
 
-export default function DynamicIsland({ currentApp }: DynamicIslandProps) {
-  const [state, setState] = useState<IslandState>("idle");
-  const [isHovered, setIsHovered] = useState(false);
-  const [notification, setNotification] = useState<IslandNotif | null>(null);
-  const [timerDisplay, setTimerDisplay] = useState("");
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { audioState, controls } = useAudioContext();
-  const music = useNowPlaying();
+const Bars = () => (
+  <div className="flex items-center" style={{ gap: 2, height: 12 }} aria-hidden>
+    {[0, 1, 2].map((i) => (
+      <motion.div
+        key={i}
+        animate={{ height: [3, 11, 5, 9, 3] }}
+        transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+        style={{ width: 2.5, borderRadius: 2, background: "#1DB954" }}
+      />
+    ))}
+  </div>
+);
 
-  // Auto-collapse after expand
+const CameraDot = () => (
+  <div
+    aria-hidden
+    style={{
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      background: "radial-gradient(circle, #1f1f1f 30%, #0a0a0a 100%)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      flexShrink: 0
+    }}
+  />
+);
+
+export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const track = useCurrentTrack();
+  const m = useMusicStore(
+    useShallow((s) => ({
+      playing: s.playing,
+      position: s.position,
+      duration: s.duration,
+      toggle: s.toggle,
+      next: s.next,
+      prev: s.prev,
+      hasNext: s.index + 1 < s.queue.length || s.repeat || s.shuffle
+    }))
+  );
+
+  // Close on outside click or Escape.
   useEffect(() => {
-    if (state === "expanded") {
-      timeoutRef.current = setTimeout(() => {
-        setState("compact");
-      }, 5000);
-    }
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
     };
-  }, [state]);
+  }, [open]);
 
-  // Timer countdown display
   useEffect(() => {
-    if (notification?.type === "timer" && notification.timerEnd) {
-      const update = () => {
-        const remaining = Math.max(0, notification.timerEnd! - Date.now());
-        const m = Math.floor(remaining / 60000);
-        const s = Math.floor((remaining % 60000) / 1000);
-        setTimerDisplay(`${m}:${s.toString().padStart(2, "0")}`);
-        if (remaining === 0 && timerRef.current) clearInterval(timerRef.current);
-      };
-      update();
-      timerRef.current = setInterval(update, 1000);
-      return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }
-  }, [notification]);
+    if (hide) setOpen(false);
+  }, [hide]);
 
-  // Listen for notifications
-  useEffect(() => {
-    const handleNotification = (e: CustomEvent) => {
-      const type: NotifType = e.detail?.type || "generic";
-      const timerEnd = type === "timer" ? Date.now() + (e.detail?.duration || 60) * 1000 : undefined;
-      setNotification({ message: e.detail?.message || "New notification", type, timerEnd });
-      setState("expanded");
-      setTimeout(() => {
-        setNotification(null);
-        setState("idle");
-      }, 4000);
-    };
+  const size = open ? SIZES.open : m.playing && track ? SIZES.playing : SIZES.idle;
 
-    window.addEventListener("island:notify" as string, handleNotification as EventListener);
-    return () => {
-      window.removeEventListener("island:notify" as string, handleNotification as EventListener);
-    };
-  }, []);
-
-  const handleClick = () => {
-    if (state === "idle" || state === "compact") {
-      setState("expanded");
-    } else {
-      setState("idle");
-    }
-  };
-
-  const getWidth = () => {
-    if (state === "expanded") return 380;
-    if (state === "compact" || isHovered) return 180;
-    return 126;
-  };
-
-  const notifIcon = () => {
-    if (!notification) return null;
-    const icons: Record<NotifType, string> = {
-      generic: "i-ph:bell",
-      music: "i-ph:music-notes",
-      appLaunch: "i-ph:arrow-square-out",
-      timer: "i-ph:timer",
-    };
-    const colors: Record<NotifType, string> = {
-      generic: "linear-gradient(135deg, var(--accent-blue), var(--accent-purple))",
-      music: "linear-gradient(135deg, var(--accent-pink), var(--accent-orange))",
-      appLaunch: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-      timer: "linear-gradient(135deg, var(--accent-orange), var(--accent-red))",
-    };
-    return { icon: icons[notification.type], color: colors[notification.type] };
-  };
+  const btn = (label: string, icon: string, onClick: () => void, disabled = false, big = false) => (
+    <button
+      aria-label={label}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="flex-center"
+      style={{ color: "white", opacity: disabled ? 0.35 : 1, width: big ? 34 : 28, height: big ? 34 : 28 }}
+    >
+      <span className={icon} style={{ width: big ? 24 : 18, height: big ? 24 : 18 }} />
+    </button>
+  );
 
   return (
+    // Above the (transparent, full-width) menu bar so clicks reach the island.
     <div
-      className="fixed top-1.5 left-1/2 z-50"
-      style={{ transform: "translateX(-50%)" }}
+      className="fixed inset-x-0 flex justify-center"
+      style={{ top: 6, zIndex: 100000, pointerEvents: "none", opacity: hide ? 0 : 1, visibility: hide ? "hidden" : "visible", transition: "opacity 0.3s" }}
     >
       <motion.div
-        layout
-        onClick={handleClick}
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
-        animate={{
-          width: getWidth(),
-          height: state === "expanded" ? "auto" : 32,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 320,
-          damping: 28,
-          mass: 0.6,
-        }}
+        ref={ref}
+        role="button"
+        aria-label={open ? "Close Now Playing" : "Open Now Playing"}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        initial={false}
+        animate={{ width: size.width, height: size.height, borderRadius: size.radius }}
+        transition={{ type: "spring", stiffness: 400, damping: 32 }}
         style={{
-          background: "#1a1a1a",
-          borderRadius: state === "expanded" ? 24 : 36,
-          cursor: "pointer",
+          pointerEvents: "auto",
+          background: "#0d0d0d",
           overflow: "hidden",
+          cursor: "default",
           boxShadow: "var(--shadow-dynamic-island)",
-          minHeight: 32,
+          fontFamily: "var(--font-system)"
         }}
       >
-        <AnimatePresence mode="wait">
-          {state === "expanded" ? (
+        <AnimatePresence initial={false} mode="popLayout">
+          {open ? (
             <motion.div
-              key="expanded"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
-              style={{ padding: "12px 16px" }}
+              key="open"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.18 } }}
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
+              style={{ width: SIZES.open.width, height: SIZES.open.height, padding: "14px 18px" }}
             >
-              {notification ? (
-                <div className="flex items-center gap-3">
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: notifIcon()?.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span className={`${notifIcon()?.icon} text-white text-lg`} />
+              {track ? (
+                <>
+                  <div className="flex items-center" style={{ gap: 12 }}>
+                    <img src={track.thumbnail} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="truncate" style={{ color: "white", fontSize: 13.5, fontWeight: 600 }}>
+                        {track.title}
+                      </div>
+                      <div className="truncate" style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>
+                        {track.artist}
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      {btn("Previous", "i-ph:skip-back-fill", m.prev)}
+                      {btn(m.playing ? "Pause" : "Play", m.playing ? "i-ph:pause-fill" : "i-ph:play-fill", () => m.toggle(), false, true)}
+                      {btn("Next", "i-ph:skip-forward-fill", m.next, !m.hasNext)}
+                    </div>
+                  </div>
+                  <div className="flex items-center" style={{ gap: 8, marginTop: 12, fontSize: 10.5, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" }}>
+                    <span>{fmt(m.position)}</span>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.18)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${Math.min(100, (m.position / Math.max(m.duration, 1)) * 100)}%`, background: "white", borderRadius: 2 }} />
+                    </div>
+                    <span>{fmt(m.duration)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center h-full" style={{ gap: 12 }}>
+                  <div className="flex-center" style={{ width: 44, height: 44, borderRadius: 10, background: "#1DB954", flexShrink: 0 }}>
+                    <span className="i-ph:music-notes-fill" style={{ width: 22, height: 22, color: "#000" }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        color: "rgba(255,255,255,0.6)",
-                        fontSize: 11,
-                        fontWeight: 500,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                      }}
-                    >
-                      {notification.type === "music" ? "Now Playing" :
-                       notification.type === "appLaunch" ? "App Launched" :
-                       notification.type === "timer" ? "Timer" : "Notification"}
-                    </div>
-                    {notification.type === "timer" ? (
-                      <div style={{ color: "white", fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                        {timerDisplay}
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          color: "white",
-                          fontSize: 13,
-                          fontWeight: 500,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {notification.message}
-                      </div>
-                    )}
+                    <div style={{ color: "white", fontSize: 13.5, fontWeight: 600 }}>Nothing playing</div>
+                    <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>Play any song on Spotify</div>
                   </div>
-                </div>
-              ) : (
-                /* Now Playing content */
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={music.cover}
-                      alt="album"
-                      style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: "white", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {music.title}
-                      </div>
-                      <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{music.artist}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); controls.toggle(!audioState.playing); }}
-                        style={{ background: "none", border: "none", color: "white", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
-                      >
-                        {audioState.playing ? <span className="i-ph:pause-fill text-xl" /> : <span className="i-ph:play-fill text-xl" />}
-                      </button>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ background: "none", border: "none", color: "white", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
-                      >
-                        <span className="i-ph:skip-forward-fill text-base" />
-                      </button>
-                    </div>
-                  </div>
-                  {/* Progress bar */}
-                  <div style={{ width: "100%", height: 3, borderRadius: 2, background: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
-                    <motion.div
-                      style={{ height: "100%", borderRadius: 2, background: "var(--accent-green)", originX: 0 }}
-                      animate={{ scaleX: audioState.playing ? [0.1, 0.9] : 0.1 }}
-                      transition={audioState.playing ? { duration: 200, ease: "linear", repeat: 0 } : { duration: 0.3 }}
-                    />
-                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      window.dispatchEvent(new CustomEvent("app:open", { detail: "spotify" }));
+                    }}
+                    style={{ background: "#1DB954", color: "#000", fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "6px 12px", flexShrink: 0 }}
+                  >
+                    Open Spotify
+                  </button>
                 </div>
               )}
             </motion.div>
           ) : (
             <motion.div
-              key="compact"
+              key="closed"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center justify-between h-full px-3"
-              style={{ height: 32 }}
+              animate={{ opacity: 1, transition: { delay: 0.05, duration: 0.15 } }}
+              exit={{ opacity: 0, transition: { duration: 0.06 } }}
+              className="flex items-center justify-between"
+              style={{ width: "100%", height: 32, padding: "0 10px 0 7px" }}
             >
-              <div className="flex items-center gap-1.5">
-                {audioState.playing && (
-                  <motion.div
-                    className="flex items-center gap-0.5"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  >
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ height: [3, 10, 5, 8, 3] }}
-                        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-                        style={{ width: 2.5, borderRadius: 2, background: "var(--accent-green)" }}
-                      />
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle, #1f1f1f 30%, #0a0a0a 100%)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)",
-                }}
-              />
+              {m.playing && track ? (
+                <>
+                  <img src={track.thumbnail} alt="" style={{ width: 20, height: 20, borderRadius: 6, objectFit: "cover" }} />
+                  <Bars />
+                </>
+              ) : (
+                <>
+                  <span />
+                  <CameraDot />
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

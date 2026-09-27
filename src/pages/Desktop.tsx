@@ -324,7 +324,7 @@ export default function Desktop(props: MacActions) {
       />
 
       {/* Dynamic Island */}
-      <DynamicIsland currentApp={state.currentTitle} />
+      <DynamicIsland hide={hideDockAndTopbar} />
 
       {/* Desktop widgets — draggable, removable, re-addable (right-click › Edit Widgets) */}
       {!isMobile && <DesktopWidgets />}
