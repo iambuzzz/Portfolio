@@ -2,7 +2,7 @@ import { useWallpaper } from "~/stores";
 import { useShallow } from "zustand/react/shallow";
 import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
-import { minMarginY, isFullScreen, wallpaperSrc } from "~/utils";
+import { minMarginY, isFullScreen, releaseKeyboardLock, wallpaperSrc } from "~/utils";
 import AppLoading from "~/components/AppLoading";
 import AppErrorBoundary from "~/components/AppErrorBoundary";
 import type { MacActions } from "~/types";
@@ -123,7 +123,11 @@ export default function Desktop(props: MacActions) {
     window.addEventListener("keydown", handleKeyDown);
     // Keep the Control Center toggle in sync when the visitor leaves full
     // screen with Esc or the browser's own controls.
-    const handleFsChange = () => useStore.setState({ fullscreen: isFullScreen() });
+    const handleFsChange = () => {
+      releaseKeyboardLock();
+      useStore.setState({ fullscreen: isFullScreen() });
+    };
+    releaseKeyboardLock();
     document.addEventListener("fullscreenchange", handleFsChange);
     
     return () => {

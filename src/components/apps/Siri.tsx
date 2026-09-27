@@ -209,21 +209,9 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         return `Here's ${profile.firstName}'s résumé — the download should start right away!`;
 
       case "toggle_fullscreen": {
-        try {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen();
-            return "Going full screen! Enjoy the immersive view.";
-          } else {
-            if (document.exitFullscreen) {
-              await document.exitFullscreen();
-              return "Exited full screen mode. Back to normal!";
-            }
-          }
-        } catch (err) {
-          // console.error("[Tool] Fullscreen toggle failed:", err);
-          return "Hmm, couldn't toggle full screen mode right now.";
-        }
-        return "Full screen mode toggled!";
+        const goFull = !document.fullscreenElement;
+        useStore.getState().toggleFullScreen(goFull);
+        return goFull ? "Going full screen. Press Esc to leave." : "Exited full screen.";
       }
 
       case "open_launchpad": {
