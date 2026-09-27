@@ -20,20 +20,15 @@ A markdown editor (built on Milkdown). **Type anything** — headings, lists, \`
 
 - [ ] Open **Spotify** and play a song
 - [ ] Ask **Siri** about ${profile.firstName}'s projects
-- [ ] Run \`sudo hire-me\` in **Terminal** 😉
+- [ ] Run \`sudo hire-ambuj\` in **Terminal** 😉
 `,
   setTyporaMd: (v) => set(() => ({ typoraMd: v })),
   faceTimeImages: {},
-  addFaceTimeImage: (v) =>
-    set((state) => {
-      const images = state.faceTimeImages;
-      images[+new Date()] = v;
-      return { faceTimeImages: images };
-    }),
+  // Always return a new object: Zustand only re-renders on a new reference.
+  addFaceTimeImage: (v) => set((state) => ({ faceTimeImages: { ...state.faceTimeImages, [Date.now()]: v } })),
   delFaceTimeImage: (k) =>
     set((state) => {
-      const images = state.faceTimeImages;
-      delete images[k];
-      return { faceTimeImages: images };
+      const { [k]: _removed, ...rest } = state.faceTimeImages;
+      return { faceTimeImages: rest };
     })
 });

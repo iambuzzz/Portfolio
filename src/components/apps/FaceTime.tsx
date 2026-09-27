@@ -9,11 +9,15 @@ interface SidebarProps {
   onTake: () => void;
   onSave: () => void;
   onSelect: (src: string) => void;
+  onDelete: (date: string) => void;
 }
 
 interface SidebarItemProps {
   date: string;
+  src: string;
   active: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
 }
 
 interface FaceTimeState {
@@ -21,74 +25,85 @@ interface FaceTimeState {
   curImage: string | null;
 }
 
-const SidebarItem = ({ date, active }: SidebarItemProps) => {
-  const [hover, setHover] = useState(false);
-  const deleteImage = useStore((state) => state.delFaceTimeImage);
+const download = (src: string, date: string) => {
+  const a = document.createElement("a");
+  a.href = src;
+  a.download = `FaceTime ${format(Number(date), "yyyy-MM-dd 'at' HH.mm.ss")}.jpg`;
+  a.click();
+};
 
+const iconBtn: React.CSSProperties = {
+  width: 26,
+  height: 26,
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(255,255,255,0.1)",
+  color: "rgba(255,255,255,0.8)",
+  flexShrink: 0
+};
+
+const SidebarItem = ({ date, src, active, onSelect, onDelete }: SidebarItemProps) => {
+  const [hover, setHover] = useState(false);
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Photo from ${format(Number(date), "h:mm a")}`}
+      onClick={onSelect}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect()}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       style={{
         display: "flex",
         alignItems: "center",
-        height: "64px",
+        height: "60px",
         padding: "0 10px",
         borderRadius: "8px",
         gap: "10px",
-        background: active ? "var(--lg-border)" : "transparent",
-        transition: "background 0.15s ease",
-        position: "relative",
+        cursor: "pointer",
+        background: active ? "var(--lg-border)" : hover ? "rgba(255,255,255,0.06)" : "transparent",
+        transition: "background 0.15s ease"
       }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
     >
-      <div 
-        style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "50%",
-            background: "rgba(0,0,0,0.2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0
-        }}
-      >
-        <span className="i-ph:link-bold" style={{ fontSize: "20px", color: "rgba(255,255,255,0.8)" }} />
-      </div>
-
+      <img src={src} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
       <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: "14px", color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          FaceTime Link
-        </div>
+        <div style={{ fontWeight: 600, fontSize: "14px", color: "rgba(255,255,255,0.9)" }}>Photo</div>
         <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "rgba(255,255,255,0.6)", fontSize: "12px", marginTop: "2px" }}>
-          <span className="i-ph:video-camera" />
-          <span>FaceTime · {format(Number(date), "hh:mm")}</span>
+          <span className="i-ph:camera" />
+          <span>{format(Number(date), "h:mm:ss a")}</span>
         </div>
       </div>
-
-      <span
-        className="i-ph:x-circle-fill"
-        style={{
-            position: "absolute",
-            right: "10px",
-            fontSize: "18px",
-            color: "rgba(255,255,255,0.4)",
-            opacity: hover ? 1 : 0,
-            transition: "all 0.15s ease",
-            cursor: "pointer"
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
-        onClick={(e) => {
-          e.stopPropagation();
-          deleteImage(date);
-        }}
-      />
+      <div style={{ display: "flex", gap: 6, opacity: hover || active ? 1 : 0, transition: "opacity 0.15s ease" }}>
+        <button
+          aria-label="Download photo"
+          title="Download"
+          style={iconBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            download(src, date);
+          }}
+        >
+          <span className="i-ph:download-simple-bold" style={{ fontSize: 13 }} />
+        </button>
+        <button
+          aria-label="Delete photo"
+          title="Delete"
+          style={{ ...iconBtn, color: "#ff6b6b" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <span className="i-ph:trash-bold" style={{ fontSize: 13 }} />
+        </button>
+      </div>
     </div>
   );
 };
 
-const Sidebar = ({ state, onTake, onSave, onSelect }: SidebarProps) => {
+const Sidebar = ({ state, onTake, onSave, onSelect, onDelete }: SidebarProps) => {
   const images = useStore((state) => state.faceTimeImages);
 
   return (
@@ -163,22 +178,22 @@ const Sidebar = ({ state, onTake, onSave, onSelect }: SidebarProps) => {
         <div style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
             Recent
         </div>
+        {Object.keys(images).length === 0 && (
+          <div style={{ padding: "4px 10px", color: "rgba(255,255,255,0.45)", fontSize: 12, lineHeight: 1.5 }}>
+            Photos you save appear here. They stay in this tab only — nothing is uploaded.
+          </div>
+        )}
         {Object.keys(images)
           .reverse()
           .map((date) => (
-            <button
+            <SidebarItem
               key={date}
-              onClick={() => onSelect(images[date])}
-              style={{
-                width: "100%",
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-              }}
-            >
-              <SidebarItem date={date} active={state.curImage === images[date]} />
-            </button>
+              date={date}
+              src={images[date]}
+              active={state.curImage === images[date]}
+              onSelect={() => onSelect(images[date])}
+              onDelete={() => onDelete(date)}
+            />
           ))}
       </div>
     </div>
@@ -188,6 +203,8 @@ const Sidebar = ({ state, onTake, onSave, onSelect }: SidebarProps) => {
 const FaceTime = () => {
   const webcamRef = useRef<Webcam>(null);
   const addImage = useStore((state) => state.addFaceTimeImage);
+  const deleteImage = useStore((state) => state.delFaceTimeImage);
+  const images = useStore((state) => state.faceTimeImages);
   const [state, setState] = useState<FaceTimeState>({
     canSave: false,
     curImage: null
@@ -209,6 +226,11 @@ const FaceTime = () => {
         }}
         onSelect={(src) => {
           setState({ curImage: src, canSave: false });
+        }}
+        onDelete={(date) => {
+          // Deleting the photo on screen goes back to the camera.
+          if (state.curImage === images[date]) setState({ curImage: null, canSave: false });
+          deleteImage(date);
         }}
       />
 
