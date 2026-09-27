@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrentTrack, useMusicStore } from "~/stores/music";
 
@@ -76,12 +76,22 @@ export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
     if (hide) setOpen(false);
   }, [hide]);
 
+  const layer = (visible: boolean, delay: number): React.CSSProperties => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    opacity: visible ? 1 : 0,
+    transition: `opacity ${visible ? 0.18 : 0.08}s ease ${visible ? delay : 0}s`,
+    pointerEvents: visible ? "auto" : "none"
+  });
+
   const size = open ? SIZES.open : m.playing && track ? SIZES.playing : SIZES.idle;
 
   const btn = (label: string, icon: string, onClick: () => void, disabled = false, big = false) => (
     <button
       aria-label={label}
       disabled={disabled}
+      tabIndex={open ? 0 : -1}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
@@ -114,18 +124,17 @@ export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
           overflow: "hidden",
           cursor: "default",
           boxShadow: "var(--shadow-dynamic-island)",
+          position: "relative",
           fontFamily: "var(--font-system)"
         }}
       >
-        <AnimatePresence initial={false} mode="popLayout">
-          {open ? (
-            <motion.div
-              key="open"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.18 } }}
-              exit={{ opacity: 0, transition: { duration: 0.08 } }}
-              style={{ width: SIZES.open.width, height: SIZES.open.height, padding: "14px 18px" }}
-            >
+        {/* Both layers are always mounted and always show the live track; they
+            just cross-fade. (AnimatePresence kept a frozen copy of the old
+            layer when an exit was interrupted, showing a stale song.) */}
+        <div
+          aria-hidden={!open}
+          style={{ ...layer(open, 0.08), width: SIZES.open.width, height: SIZES.open.height, padding: "14px 18px" }}
+        >
               {track ? (
                 <>
                   <div className="flex items-center" style={{ gap: 12 }}>
@@ -162,6 +171,7 @@ export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
                     <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>Play any song on Spotify</div>
                   </div>
                   <button
+                    tabIndex={open ? 0 : -1}
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpen(false);
@@ -173,16 +183,12 @@ export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
                   </button>
                 </div>
               )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="closed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { delay: 0.05, duration: 0.15 } }}
-              exit={{ opacity: 0, transition: { duration: 0.06 } }}
-              className="flex items-center justify-between"
-              style={{ width: "100%", height: 32, padding: "0 10px 0 7px" }}
-            >
+        </div>
+        <div
+          aria-hidden={open}
+          className="flex items-center justify-between"
+          style={{ ...layer(!open, 0.05), width: "100%", height: 32, padding: "0 10px 0 7px" }}
+        >
               {m.playing && track ? (
                 <>
                   <img src={track.thumbnail} alt="" style={{ width: 20, height: 20, borderRadius: 6, objectFit: "cover" }} />
@@ -194,9 +200,7 @@ export default function DynamicIsland({ hide = false }: { hide?: boolean }) {
                   <CameraDot />
                 </>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </motion.div>
     </div>
   );
