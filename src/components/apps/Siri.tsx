@@ -10,6 +10,35 @@ import { searchSongs } from "~/utils/saavn";
 
 type SiriPhase = "idle" | "recording" | "processing" | "speaking" | "error";
 
+/** Replies are shown in a small bubble and read aloud: strip any markdown. */
+const toPlainText = (text: string) =>
+  text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [label](url) → label
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/^\s*[-*•]\s+/gm, "") // bullets
+    .replace(/(\*\*|__)(.*?)\1/g, "$2") // bold
+    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, "$1$2") // italics
+    .replace(/[*#]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+
+/** Extra cleanup for the voice only: don't read out URLs, dashes or emoji. */
+const toSpeech = (text: string) =>
+  text
+    .replace(/https?:\/\/\S+/g, "the link")
+    .replace(/\s*[\u2014\u2013]\s*/g, ", ")
+    .replace(/[·|]/g, ", ")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Chrome stops long utterances after ~15s, so speak sentence by sentence.
+// Split only where punctuation is followed by a space, so "Next.js" stays whole.
+const toSentences = (text: string) => text.split(/(?<=[.!?])\s+/).map((t) => t.trim()).filter(Boolean);
+
 //  Check browser SpeechRecognition support 
 const SpeechRecognitionAPI =
   typeof window !== "undefined"
@@ -209,43 +238,82 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     }
   }, [controls, openAppById, closeAppById, downloadResume]);
 
-  //  TTS 
-  const speakText = useCallback((text: string) => {
-    if (!text) { setPhase("idle"); return; }
-    window.speechSynthesis.cancel();
-    setPhase("speaking");
-    // console.log("[TTS] Speaking:", text);
+  //  Listening lifecycle 
+  // Bumped whenever listening is cancelled (typed question, close), so late
+  // results/errors from the mic can't overwrite the current answer.
+  const listenIdRef = useRef(0);
 
-    const utt = new SpeechSynthesisUtterance(text);
+  const cancelListening = useCallback(() => {
+    listenIdRef.current++;
+    if (vadLoopRef.current) {
+      cancelAnimationFrame(vadLoopRef.current);
+      vadLoopRef.current = null;
+    }
+    try {
+      recognitionRef.current?.abort();
+    } catch { /* not started */ }
+    recognitionRef.current = null;
+    const rec = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (rec && rec.state !== "inactive") {
+      rec.onstop = () => rec.stream.getTracks().forEach((t) => t.stop());
+      try { rec.stop(); } catch { /* already stopped */ }
+    }
+  }, []);
+
+  //  TTS 
+  // Bumped on every new reply / stop, so callbacks from cancelled speech are ignored.
+  const speechIdRef = useRef(0);
+
+  const stopSpeaking = useCallback(() => {
+    speechIdRef.current++;
+    window.speechSynthesis.cancel();
+    setPhase((p) => (p === "speaking" ? "idle" : p));
+  }, []);
+
+  const speakText = useCallback((text: string) => {
+    window.speechSynthesis.cancel();
+    const id = ++speechIdRef.current;
+    const parts = toSentences(toSpeech(text));
+    if (!text || !parts.length) { setPhase("idle"); return; }
+    setPhase("speaking");
+
     const voices = window.speechSynthesis.getVoices();
     const voice = voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
       || voices.find((v) => v.lang.startsWith("en-US"))
       || voices.find((v) => v.lang.startsWith("en"))
       || voices[0];
-    if (voice) utt.voice = voice;
-    utt.rate = 1.0;
-    utt.pitch = 1.1;
-    utt.onend = () => {
-      // console.log("[TTS]  Done");
-      setPhase("idle");
 
-      // Auto-close Siri after speaking
-      setTimeout(() => {
-        if (closeSiri) closeSiri(); else closeAppById('siri');
-      }, 2000);
+    const done = () => {
+      if (speechIdRef.current === id) setPhase("idle");
     };
-    utt.onerror = (e) => {
-      // console.error("[TTS]  Error:", e);
-      setPhase("idle");
-
-      // Auto-close on error as well
-      setTimeout(() => {
-        if (closeSiri) closeSiri(); else closeAppById('siri');
-      }, 2000);
-    };
-
-    setTimeout(() => window.speechSynthesis.speak(utt), 100);
+    parts.forEach((part, i) => {
+      const utt = new SpeechSynthesisUtterance(part);
+      if (voice) utt.voice = voice;
+      utt.rate = 1.0;
+      utt.pitch = 1.1;
+      if (i === parts.length - 1) utt.onend = done;
+      utt.onerror = done;
+      window.speechSynthesis.speak(utt);
+    });
   }, []);
+
+  const close = useCallback(() => {
+    cancelListening();
+    stopSpeaking();
+    if (closeSiri) closeSiri(); else closeAppById("siri");
+  }, [cancelListening, stopSpeaking, closeSiri, closeAppById]);
+
+  // Never keep talking after Siri is closed; Esc closes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      speechIdRef.current++;
+      window.speechSynthesis.cancel();
+    };
+  }, [close]);
 
   //  Groq LLM Agent 
   const executeAgent = useCallback(async (userText: string) => {
@@ -295,7 +363,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         reply = SIRI_FALLBACK;
       }
 
-      // console.log("[Agent] Final reply:", reply);
+      reply = toPlainText(reply) || SIRI_FALLBACK;
       setResponseText(reply);
       speakText(reply);
     } catch {
@@ -315,11 +383,13 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   const handleTextInput = useCallback(async (text: string) => {
     const cleaned = (text || "").trim();
     if (!cleaned) return;
+    cancelListening();
+    window.speechSynthesis.cancel();
     setResponseText(`You typed: "${cleaned}"`);
     setPhase("processing");
     await executeAgent(cleaned);
     setInputText("");
-  }, [executeAgent]);
+  }, [executeAgent, cancelListening]);
 
   //  Handle transcribed text 
   const handleTranscription = useCallback(async (text: string) => {
@@ -339,6 +409,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   const startBrowserSTT = useCallback(() => {
     if (!SpeechRecognitionAPI) return;
 
+    const lid = ++listenIdRef.current;
+    const live = () => lid === listenIdRef.current;
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = "en-US";
     recognition.interimResults = false;
@@ -346,6 +418,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     recognition.continuous = false;
 
     recognition.onresult = (event: any) => {
+      if (!live()) return;
       const transcript = event.results[0][0].transcript;
       const confidence = event.results[0][0].confidence;
       // console.log(`[BrowserSTT] Result: "${transcript}" (confidence: ${confidence})`);
@@ -359,6 +432,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     };
 
     recognition.onerror = (event: any) => {
+      if (!live()) return;
       // console.error("[BrowserSTT] Error:", event.error);
       if (event.error === "no-speech") {
         setResponseText("I didn't hear anything. Please try again.");
@@ -366,7 +440,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         setUseBrowserSTT(false);
         setResponseText("Tap Siri again to talk, or type your question below.");
       } else if (event.error === "not-allowed") {
-        setResponseText("Microphone access denied. Please allow permissions.");
+        setResponseText("Microphone access denied — you can type your question below.");
       } else {
         setResponseText("Speech recognition error. Please try again.");
       }
@@ -374,6 +448,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     };
 
     recognition.onend = () => {
+      if (!live()) return;
       setPhase((prev) => prev === "recording" ? "idle" : prev);
     };
 
@@ -393,6 +468,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
   //  Whisper fallback 
   const startWhisperSTT = useCallback(async () => {
+    const lid = ++listenIdRef.current;
+    const live = () => lid === listenIdRef.current;
     try {
       setResponseText("");
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -413,6 +490,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        if (!live()) return;
         const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
         setPhase("processing");
         if (blob.size < 1000) {
@@ -422,9 +500,9 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         }
         try {
           const text = await transcribeAudio(blob);
-          await handleTranscription(text);
+          if (live()) await handleTranscription(text);
         } catch (err: any) {
-          // console.error("[Whisper] Error:", err);
+          if (!live()) return;
           setResponseText(
             /\b503\b/.test(String(err?.message))
               ? "Voice isn't set up here yet — type your question below instead."
@@ -484,9 +562,9 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       mediaRecorderRef.current = recorder;
       setPhase("recording");
       // console.log("[Whisper]  Recording...");
-    } catch (err: any) {
-      // console.error("[Whisper] Mic error:", err);
-      setResponseText("Microphone access denied.");
+    } catch {
+      if (!live()) return;
+      setResponseText("Microphone access denied — you can type your question below.");
       setPhase("error");
     }
   }, [handleTranscription]);
@@ -520,38 +598,34 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     }
 
     return () => {
-      // Cleanup on unmount
-      if (useBrowserSTT && recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) { }
-      } else if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        try {
-          mediaRecorderRef.current.stop();
-        } catch (e) { }
-      }
+      // Stop the mic when Siri closes.
+      cancelListening();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   //  Click handler: play siri.mp3, then start listening 
   const handleClick = useCallback(async () => {
-    if (phase === "recording") {
+    if (phase === "speaking") {
+      stopSpeaking();
+    } else if (phase === "recording") {
       // Stop recording
       if (useBrowserSTT) stopBrowserSTT();
       else stopWhisperSTT();
-    } else if (phase === "idle" || phase === "error" || phase === "speaking") {
-      window.speechSynthesis.cancel();
+    } else if (phase === "idle" || phase === "error") {
 
       // Play Siri activation sound, then start listening
       setResponseText("");
       setPhase("recording");
+      const lid = listenIdRef.current;
       await playSiriSound();
+      // Typed a question (or closed Siri) while the chime was playing.
+      if (lid !== listenIdRef.current) return;
 
       if (useBrowserSTT) startBrowserSTT();
       else await startWhisperSTT();
     }
-  }, [phase, useBrowserSTT, startBrowserSTT, stopBrowserSTT, startWhisperSTT, stopWhisperSTT, playSiriSound]);
+  }, [phase, useBrowserSTT, startBrowserSTT, stopBrowserSTT, startWhisperSTT, stopWhisperSTT, playSiriSound, stopSpeaking]);
 
   //  Display 
   let statusText = "";
@@ -599,14 +673,34 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         className={`siri-glass-panel relative z-20 flex flex-col justify-center px-6 py-5 w-[320px] min-h-[120px] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${boxText || statusText ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
           }`}
       >
-        {/* Header containing Siri icon and Title */}
+        {/* Header: title, Stop (while speaking) and the one Close button */}
         <div className="flex items-center gap-2 mb-2">
           <div className="w-5 h-5 rounded-md overflow-hidden bg-black/5 dark:bg-white/5 flex items-center justify-center">
-            <img src="/img/icons/siri.png" className="w-full h-full object-cover" alt="Siri" />
+            <img src="/img/icons/siri.png" className="w-full h-full object-cover" alt="" />
           </div>
           <span className="text-[13px] font-semibold text-black/60 dark:text-white/60 tracking-wide uppercase">
             Siri
           </span>
+          <div className="ml-auto flex items-center gap-2">
+            {phase === "speaking" && (
+              <button
+                onClick={(e) => { e.stopPropagation(); stopSpeaking(); }}
+                aria-label="Stop speaking"
+                className="flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[12px] font-semibold bg-black/10 hover:bg-black/15 dark:bg-white/15 dark:hover:bg-white/25 text-black/80 dark:text-white"
+              >
+                <span className="i-ph:stop-fill" style={{ width: 11, height: 11 }} />
+                Stop
+              </button>
+            )}
+            <button
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors"
+              onClick={(e) => { e.stopPropagation(); close(); }}
+              aria-label="Close Siri"
+              title="Close (Esc)"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
         </div>
 
         {/* Content Area */}
@@ -631,25 +725,17 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
           <input
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              // Keep desktop shortcuts out of the text box, but let Esc close Siri.
+              e.stopPropagation();
+              if (e.key === "Escape") close();
+            }}
             placeholder="Ask Siri…"
             aria-label="Ask Siri"
             className="w-full rounded-xl px-3 py-2 text-[14px] outline-none bg-black/5 dark:bg-white/10 text-black/90 dark:text-white placeholder-black/40 dark:placeholder-white/40"
           />
         </form>
 
-        {/* Close Button on the Top-Right of the panel */}
-        <button
-          className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            setResponseText("");
-            setPhase("idle");
-          }}
-          title="Dismiss"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
       </div>
 
       {/* The Orb Container */}
@@ -670,7 +756,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         <div
           className="relative z-10 flex justify-center items-center w-[130px] h-[130px] rounded-full cursor-pointer transform hover:scale-105 active:scale-95 transition-transform duration-300"
           onClick={handleClick}
-          title="Tap to listen / Stop"
+          title={phase === "speaking" ? "Tap to stop" : phase === "recording" ? "Tap to stop listening" : "Tap to speak"}
         >
           {/* Specifically removed white backdrop behind the video */}
 
@@ -684,14 +770,6 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
           />
         </div>
 
-        {/* Close app button (appears only on hover of the orb area) */}
-        <button
-          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100 z-30 shadow-md backdrop-blur-sm"
-          onClick={(e) => { e.stopPropagation(); if (closeSiri) closeSiri(); else closeAppById('siri'); }}
-          title="Close Siri App completely"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
       </div>
     </div>
   );
