@@ -4,7 +4,7 @@ import { SIRI_SYSTEM_PROMPT, SIRI_TOOLS } from "../../src/data/siri";
 export const config = { runtime: "edge" };
 
 // Tried in order until one succeeds. Update here when Groq retires a model.
-const CHAT_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+const CHAT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
 
 const MAX_CHARS = 500;
 
@@ -39,7 +39,9 @@ export default async function handler(req: Request): Promise<Response> {
       tools: SIRI_TOOLS,
       tool_choice: "auto",
       temperature: 0.2,
-      max_tokens: 400
+      // gpt-oss reasons before answering; keep it short so Siri replies fast.
+      reasoning_effort: "low",
+      max_tokens: 700
     };
 
     try {
