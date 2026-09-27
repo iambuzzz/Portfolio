@@ -16,7 +16,6 @@ declare global {
   const Battery: typeof import('./components/menus/Battery')['default']
   const BatteryWidget: typeof import('./components/widgets/BatteryWidget')['default']
   const Bear: typeof import('./components/apps/Bear')['default']
-  const Calculator: typeof import('./components/apps/Calculator')['default']
   const CalendarWidget: typeof import('./components/widgets/CalendarWidget')['default']
   const Clock: typeof import('./components/apps/Clock')['default']
   const ClockWidget: typeof import('./components/widgets/ClockWidget')['default']

@@ -15,7 +15,7 @@ const appLibraryCategories = [
   },
   {
     name: "Productivity",
-    apps: ["notes", "calculator", "clock", "terminal", "vscode", "typora", "bear"]
+    apps: ["notes", "clock", "terminal", "vscode", "typora", "bear"]
   },
   {
     name: "Entertainment",
@@ -37,19 +37,6 @@ const getRandomDate = () => {
   const timeStamp = new Date().getTime();
   const randomStamp = getRandom(0, timeStamp);
   return format(randomStamp, "MM/dd/yyyy");
-};
-
-const evalMath = (expr: string): string | null => {
-  try {
-    const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, "");
-    if (!/[+\-*/]/.test(sanitized)) return null;
-    // eslint-disable-next-line no-new-func
-    const result = Function(`"use strict"; return (${sanitized})`)();
-    if (typeof result === "number" && isFinite(result)) {
-      return Number.isInteger(result) ? String(result) : result.toFixed(6).replace(/\.?0+$/, "");
-    }
-  } catch {}
-  return null;
 };
 
 interface SpotlightProps {
@@ -294,8 +281,6 @@ export default function Spotlight({
     setActiveTab("All");
   };
 
-  const mathResult = evalMath(searchText);
-
   const renderAppLibrary = () => {
     return (
       <div className="w-full h-full bg-transparent overflow-y-scroll p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6 content-start">
@@ -426,17 +411,6 @@ export default function Spotlight({
           </span>
         ))}
       </div>
-      {/* Inline calculator result */}
-      {mathResult !== null && activeTab === "All" && (
-        <div
-          className="px-4 pb-2 flex items-baseline gap-2"
-          style={{ borderBottom: '1px solid var(--lg-border-subtle)' }}
-        >
-          <img src="/img/icons/sf-icons/calculator.svg" alt="Calculator" className="dark:invert opacity-60" style={{ width: "18px", height: "18px" }} />
-          <span className="text-c-500 text-sm">{searchText} =</span>
-          <span className="text-c-black font-semibold text-2xl">{mathResult}</span>
-        </div>
-      )}
       {(searchText !== "" || activeTab !== "All") && (
         <div flex h-85 bg-transparent border="t menu">
           {activeTab === "Applications" ? (

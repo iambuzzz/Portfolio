@@ -24,7 +24,6 @@ const APP_ALIASES: Record<string, string> = {
   photos: "photos",
   maps: "maps",
   map: "maps",
-  calculator: "calculator",
   settings: "system-settings",
   "system settings": "system-settings",
   spotify: "spotify",

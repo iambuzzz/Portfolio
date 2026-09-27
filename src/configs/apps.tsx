@@ -13,7 +13,6 @@ const VSCode = lazy(() => import("~/components/apps/VSCode"));
 const FaceTime = lazy(() => import("~/components/apps/FaceTime"));
 const Terminal = lazy(() => import("~/components/apps/Terminal"));
 const Siri = lazy(() => import("~/components/apps/Siri"));
-const Calculator = lazy(() => import("~/components/apps/Calculator"));
 const SystemSettings = lazy(() => import("~/components/apps/SystemSettings"));
 const Notes = lazy(() => import("~/components/apps/Notes"));
 const Spotify = lazy(() => import("~/components/apps/Spotify"));
@@ -144,20 +143,6 @@ const apps: AppsData[] = [
     y: -40,
     img: "img/icons/siri.png",
     content: <Siri />,
-  },
-  {
-    id: "calculator",
-    title: "Calculator",
-    desktop: true,
-    width: 300,
-    height: 520,
-    minWidth: 240,
-    minHeight: 420,
-    titlebar: "transparent",
-    x: 40,
-    y: 20,
-    img: "img/icons/calculator.png",
-    content: <Calculator />,
   },
   {
     id: "system-settings",
