@@ -23,7 +23,6 @@ interface DesktopState {
   maxZ: number;
   showLaunchpad: boolean;
   currentTitle: string;
-  hideDockAndTopbar: boolean;
   spotlight: boolean;
   showNotificationCenter: boolean;
 }
@@ -51,7 +50,6 @@ export default function Desktop(props: MacActions) {
     maxZ: 2,
     showLaunchpad: false,
     currentTitle: "Finder",
-    hideDockAndTopbar: false,
     spotlight: false,
     showNotificationCenter: false,
   });
@@ -163,7 +161,7 @@ export default function Desktop(props: MacActions) {
       const maxApps = { ...prev.maxApps };
       if (target === undefined) target = !maxApps[id];
       maxApps[id] = target!;
-      return { ...prev, maxApps, hideDockAndTopbar: target! };
+      return { ...prev, maxApps };
     });
   };
 
@@ -185,7 +183,6 @@ export default function Desktop(props: MacActions) {
       ...prev,
       showApps: { ...prev.showApps, [id]: false },
       maxApps: { ...prev.maxApps, [id]: false },
-      hideDockAndTopbar: false,
     }));
   };
 
@@ -224,6 +221,13 @@ export default function Desktop(props: MacActions) {
       };
     });
   };
+
+  // Hide Dock + TopBar only while the front-most visible window is maximised.
+  // Derived (not stored) so it can never go stale after close/minimise/focus.
+  const frontApp = Object.keys(state.showApps)
+    .filter((id) => state.showApps[id] && !state.minApps[id] && id !== "siri")
+    .sort((a, b) => (state.appsZ[b] ?? 0) - (state.appsZ[a] ?? 0))[0];
+  const hideDockAndTopbar = !!frontApp && !!state.maxApps[frontApp];
 
   const renderAppWindows = () => {
     return apps.map((app) => {
@@ -311,7 +315,7 @@ export default function Desktop(props: MacActions) {
         sleepMac={props.sleepMac}
         restartMac={props.restartMac}
         toggleSpotlight={toggleSpotlight}
-        hide={state.hideDockAndTopbar}
+        hide={hideDockAndTopbar}
         setSpotlightBtnRef={setSpotlightBtnRef}
         openApp={openApp}
         toggleNotificationCenter={toggleNotificationCenter}
@@ -398,7 +402,7 @@ export default function Desktop(props: MacActions) {
         showApps={state.showApps}
         showLaunchpad={state.showLaunchpad}
         toggleLaunchpad={toggleLaunchpad}
-        hide={state.hideDockAndTopbar}
+        hide={hideDockAndTopbar}
       />
 
       {/* Context Menu */}
