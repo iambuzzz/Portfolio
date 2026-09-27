@@ -6,6 +6,7 @@ import { profile } from "~/data/profile";
 import { SIRI_FALLBACK } from "~/data/siri";
 import { localAnswer } from "~/data/siriLocal";
 import { useMusicStore } from "~/stores/music";
+import { searchSongs } from "~/utils/saavn";
 
 type SiriPhase = "idle" | "recording" | "processing" | "speaking" | "error";
 
@@ -101,6 +102,19 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       }
 
       case "play_music": {
+        // "Play <song>": search JioSaavn and play the best match.
+        const query = typeof args?.query === "string" ? args.query.trim() : "";
+        if (query) {
+          try {
+            const tracks = await searchSongs(query);
+            if (!tracks.length) return `I couldn't find "${query}".`;
+            useMusicStore.getState().playQueue(tracks, 0);
+            openAppById("spotify");
+            return `Playing ${tracks[0].title} by ${tracks[0].artist}.`;
+          } catch {
+            return "The music service isn't responding right now.";
+          }
+        }
         // Resume the current song, or open Spotify if nothing is queued yet.
         if (useMusicStore.getState().queue.length) {
           controls.play();

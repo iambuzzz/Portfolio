@@ -577,3 +577,35 @@
 .dark .app-theme img[src*="/sf-icons/"] {
   filter: invert(1);
 }
+
+/* Spotify sliders: thin white track, thumb appears on hover */
+.spotify-range {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 2px;
+  outline: none;
+}
+.spotify-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.spotify-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+}
+.spotify-range:hover::-webkit-slider-thumb,
+.spotify-range:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+.spotify-range:hover::-moz-range-thumb {
+  opacity: 1;
+}

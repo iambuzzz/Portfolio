@@ -60,7 +60,9 @@ export function localAnswer(raw: string): LocalAnswer | null {
   if (/\b(resume|résumé|cv)\b/.test(t)) return { reply: `Here's ${first}'s résumé — the download should start right away!`, tool: { name: "download_resume" } };
   if (/\b(time|date|day is it|what day)\b/.test(t)) return { reply: "", tool: { name: "get_current_time" } };
   if (/\b(pause|stop)\b.*\b(music|song|playing)\b|^(pause|stop)$/.test(t)) return { reply: "Paused.", tool: { name: "pause_music" } };
-  if (/\bplay\b/.test(t)) return { reply: "Opening Spotify — search for any song!", tool: { name: "open_app", args: { app_id: "spotify" } } };
+  const play = t.match(/\bplay\s+(?:the\s+)?(?:song\s+)?(.+?)(?:\s+on\s+spotify)?[.!?]*$/);
+  if (play && !/^(some\s+)?(music|a song|songs|something)$/.test(play[1])) return { reply: "", tool: { name: "play_music", args: { query: play[1] } } };
+  if (/\bplay\b/.test(t)) return { reply: "", tool: { name: "play_music" } };
   if (/\bfull ?screen\b/.test(t)) return { reply: "", tool: { name: "toggle_fullscreen" } };
   if (/\b(close|quit|exit)\b/.test(t)) {
     const app = findApp(t);
