@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { commonmark } from "@milkdown/preset-commonmark";
@@ -6,10 +7,10 @@ import { history } from "@milkdown/plugin-history";
 import { listener, listenerCtx } from "@milkdown/plugin-listener";
 
 const MilkdownEditor = () => {
-  const { typoraMd, setTyporaMd } = useStore((state) => ({
+  const { typoraMd, setTyporaMd } = useStore(useShallow((state) => ({
     typoraMd: state.typoraMd,
     setTyporaMd: state.setTyporaMd
-  }));
+  })));
 
   useEditor((root) =>
     Editor.make()

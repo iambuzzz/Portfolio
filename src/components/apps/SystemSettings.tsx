@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { motion, AnimatePresence } from "framer-motion";
 import { wallpaperThumb } from "~/utils";
 import { useState } from "react";
@@ -267,7 +268,7 @@ const AppearancePanel = () => {
     iconStyle, setIconStyle,
     tintWindows, setTintWindows,
     getWallpaper,
-  } = useStore((s) => ({
+  } = useStore(useShallow((s) => ({
     accentColor: s.accentColor,
     setAccentColor: s.setAccentColor,
     appearanceMode: s.appearanceMode,
@@ -277,7 +278,7 @@ const AppearancePanel = () => {
     tintWindows: s.tintWindows,
     setTintWindows: s.setTintWindows,
     getWallpaper: s.getWallpaper,
-  }));
+  })));
 
   const wallpaper = getWallpaper();
   const colors = [
@@ -458,11 +459,11 @@ const AppearancePanel = () => {
 };
 
 const WallpaperPanel = () => {
-  const { wallpaperSets, activeWallpaperSet, setActiveWallpaperSet } = useStore((s) => ({
+  const { wallpaperSets, activeWallpaperSet, setActiveWallpaperSet } = useStore(useShallow((s) => ({
     wallpaperSets: s.wallpaperSets,
     activeWallpaperSet: s.activeWallpaperSet,
     setActiveWallpaperSet: s.setActiveWallpaperSet,
-  }));
+  })));
   const dark = useStore((s) => s.dark);
 
   return (
@@ -550,7 +551,7 @@ const DockPanel = () => {
     setDockPosition,
     dockAutoHide,
     setDockAutoHide,
-  } = useStore((s) => ({
+  } = useStore(useShallow((s) => ({
     dockSize: s.dockSize,
     dockMag: s.dockMag,
     setDockSize: s.setDockSize,
@@ -559,7 +560,7 @@ const DockPanel = () => {
     setDockPosition: s.setDockPosition,
     dockAutoHide: s.dockAutoHide,
     setDockAutoHide: s.setDockAutoHide,
-  }));
+  })));
 
   const SliderRow = ({
     label,
@@ -671,14 +672,14 @@ const NotificationsPanel = () => {
 };
 
 const SoundPanel = () => {
-  const { volume, setVolume } = useStore((s) => ({
+  const { volume, setVolume } = useStore(useShallow((s) => ({
     volume: s.volume,
     setVolume: s.setVolume,
-  }));
-  const { notificationSound, setNotificationSound } = useStore((s) => ({
+  })));
+  const { notificationSound, setNotificationSound } = useStore(useShallow((s) => ({
     notificationSound: s.notificationSound,
     setNotificationSound: s.setNotificationSound,
-  }));
+  })));
   const [outputDevice, setOutputDevice] = useState("MacBook Pro Speakers");
   const [inputDevice, setInputDevice] = useState("MacBook Pro Microphone");
   const [playFeedback, setPlayFeedback] = useState(true);
@@ -767,10 +768,10 @@ const SoundPanel = () => {
 };
 
 const DisplaysPanel = () => {
-  const { brightness, setBrightness } = useStore((s) => ({
+  const { brightness, setBrightness } = useStore(useShallow((s) => ({
     brightness: s.brightness,
     setBrightness: s.setBrightness,
-  }));
+  })));
   const [resolution, setResolution] = useState("Default (2880 x 1800)");
   const [refreshRate, setRefreshRate] = useState("120Hz");
   const [trueTone, setTrueTone] = useState(true);

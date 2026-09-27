@@ -1,3 +1,5 @@
+import { useShallow } from "zustand/react/shallow";
+import { wallpaperSrc } from "~/utils";
 import React, { Suspense, useState, useRef } from "react";
 import AppLoading from "~/components/AppLoading";
 import { apps } from "~/configs";
@@ -20,17 +22,17 @@ export default function Mobile(props: MacActions) {
 
   const { audioState, controls } = useAudioContext();
 
-  const { dark, brightness, getWallpaper, volume } = useStore((s) => ({
+  const { dark, brightness, getWallpaper, volume } = useStore(useShallow((s) => ({
     dark: s.dark,
     brightness: s.brightness,
     getWallpaper: s.getWallpaper,
     volume: s.volume,
-  }));
+  })));
 
-  const { setVolume, setBrightness } = useStore((s) => ({
+  const { setVolume, setBrightness } = useStore(useShallow((s) => ({
     setVolume: s.setVolume,
     setBrightness: s.setBrightness,
-  }));
+  })));
 
   const setAudioVolume = (value: number): void => {
     setVolume(value);
@@ -52,7 +54,7 @@ export default function Mobile(props: MacActions) {
   };
 
   const bgStyle: React.CSSProperties = {
-    backgroundImage: `url(${dark ? activeWallpaper.night : activeWallpaper.day})`,
+    backgroundImage: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     filter: `brightness(${(brightness as number) * 0.7 + 50}%)`,

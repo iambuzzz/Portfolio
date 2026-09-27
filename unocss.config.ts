@@ -65,6 +65,12 @@ export default defineConfig({
     presetAttributify(),
     presetIcons({
       warn: true,
+      // Explicit loaders: pnpm's strict layout hides icon sets from auto-discovery.
+      collections: {
+        ph: () => import("@iconify-json/ph/icons.json").then((i) => i.default as any),
+        "fa6-brands": () =>
+          import("@iconify-json/fa6-brands/icons.json").then((i) => i.default as any)
+      },
       extraProperties: {
         display: "inline-block"
       }

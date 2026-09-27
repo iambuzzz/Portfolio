@@ -81,7 +81,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
   // Store & audio context (use controls.play/pause to keep state in sync with TopBar)
   const { controls } = useAudioContext();
-  const store = useStore();
+  // Read the store lazily inside handlers so Siri doesn't re-render on every change.
 
   // Preload voices
   useEffect(() => {
@@ -160,8 +160,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
     switch (name) {
       case "toggle_dark_mode": {
-        store.toggleDark();
-        const nowDark = !store.dark;
+        useStore.getState().toggleDark();
+        const nowDark = useStore.getState().dark;
         // console.log(`[Tool]  Dark mode: ${nowDark}`);
         return nowDark ? "Switched to dark mode." : "Switched to light mode.";
       }
@@ -189,7 +189,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
       case "set_volume": {
         const v = Math.max(0, Math.min(100, Number(args?.level) || 50));
-        store.setVolume(v);
+        useStore.getState().setVolume(v);
         controls.volume(v / 100);
         // console.log(`[Tool]  Volume: ${v}%`);
         return `Volume set to ${v}%.`;
@@ -197,18 +197,18 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
       case "set_brightness": {
         const b = Math.max(1, Math.min(100, Number(args?.level) || 50));
-        store.setBrightness(b);
+        useStore.getState().setBrightness(b);
         // console.log(`[Tool]  Brightness: ${b}%`);
         return `Brightness set to ${b}%.`;
       }
 
       case "toggle_wifi":
-        store.toggleWIFI();
+        useStore.getState().toggleWIFI();
         // console.log("[Tool]  WiFi toggled");
         return "Wi-Fi toggled.";
 
       case "toggle_bluetooth":
-        store.toggleBluetooth();
+        useStore.getState().toggleBluetooth();
         // console.log("[Tool]  Bluetooth toggled");
         return "Bluetooth toggled.";
 
@@ -264,7 +264,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         // console.warn(`[Tool]  Unknown tool: ${name}`);
         return "Done.";
     }
-  }, [store, controls, openAppById, closeAppById, downloadResume]);
+  }, [controls, openAppById, closeAppById, downloadResume]);
 
   //  TTS 
   const speakText = useCallback((text: string) => {

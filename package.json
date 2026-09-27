@@ -31,7 +31,8 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@iconify/json": "^2.2.205",
+    "@iconify-json/fa6-brands": "^1.2.6",
+    "@iconify-json/ph": "^1.2.2",
     "@types/node": "^20.12.8",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
@@ -39,7 +40,7 @@
     "@types/react-syntax-highlighter": "^15.5.11",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
-    "@unocss/reset": "^0.59.4",
+    "@unocss/reset": "^66.10.5",
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -54,7 +55,7 @@
     "sort-package-json": "^2.10.0",
     "taze": "^0.13.8",
     "typescript": "^5.4.5",
-    "unocss": "^0.59.4",
+    "unocss": "^66.10.5",
     "unplugin-auto-import": "^0.17.5",
     "vite": "^5.2.10"
   },

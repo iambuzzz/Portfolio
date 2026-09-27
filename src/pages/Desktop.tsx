@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
 import { minMarginY, isFullScreen, enterFullScreen, exitFullScreen, wallpaperSrc } from "~/utils";
@@ -58,11 +59,11 @@ export default function Desktop(props: MacActions) {
     useState<React.RefObject<HTMLDivElement> | null>(null);
   const [showAboutMac, setShowAboutMac] = useState(false);
 
-  const { dark, brightness, getWallpaper } = useStore((s) => ({
+  const { dark, brightness, getWallpaper } = useStore(useShallow((s) => ({
     dark: s.dark,
     brightness: s.brightness,
     getWallpaper: s.getWallpaper,
-  }));
+  })));
 
   const { isMobile } = useWindowSize();
 

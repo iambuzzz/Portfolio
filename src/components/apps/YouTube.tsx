@@ -13,7 +13,7 @@ export default function YouTube() {
         height: "100%",
         overflow: "hidden",
         fontFamily:
-          "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif",
+          "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
         backgroundColor: dark ? "#1c1c1e" : "#ffffff",
       }}
     >

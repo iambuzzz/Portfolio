@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React from "react";
 import "react-rangeslider/lib/index.css";
 
@@ -8,10 +9,10 @@ interface WifiMenuProps {
 
 export default function WifiMenu({ toggleWifiMenu, btnRef }: WifiMenuProps) {
   const wifiRef = useRef<HTMLDivElement>(null);
-  const { wifi, toggleWIFI } = useStore((state) => ({
+  const { wifi, toggleWIFI } = useStore(useShallow((state) => ({
     wifi: state.wifi,
     toggleWIFI: state.toggleWIFI
-  }));
+  })));
 
   useClickOutside(wifiRef, toggleWifiMenu, [btnRef]);
 

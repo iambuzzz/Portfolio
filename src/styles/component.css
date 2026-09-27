@@ -51,10 +51,10 @@
   --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
 
   /* Typography */
-  --font-system: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', system-ui, sans-serif;
-  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --font-system: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-  --font-rounded: 'SF Pro Rounded', -apple-system, ui-rounded, 'Inter', 'Helvetica Neue', sans-serif;
+  --font-rounded: 'SF Pro Rounded', -apple-system, ui-rounded, 'Helvetica Neue', sans-serif;
   --font-avenir: 'Avenir Next LT Pro', 'Helvetica Neue', SFCompactRounded, -apple-system, Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', sans-serif;
 
   /* Accent Colors */

@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React from "react";
 import { apps } from "~/configs";
 import { useStore } from "~/stores";
@@ -5,10 +6,10 @@ import { useStore } from "~/stores";
 export default function MobileDock({ openApp }: { openApp: (id: string) => void }) {
   const dockApps = ["facetime", "messages", "safari", "music"];
 
-  const { dark, iconStyle } = useStore((s) => ({
+  const { dark, iconStyle } = useStore(useShallow((s) => ({
     dark: s.dark,
     iconStyle: s.iconStyle,
-  }));
+  })));
 
   const bgClass = dark 
     ? "bg-white/20 shadow-[0_0_20px_rgba(0,0,0,0.2)]" 

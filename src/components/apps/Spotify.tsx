@@ -13,7 +13,7 @@ export default function Spotify() {
         height: "100%",
         overflow: "hidden",
         fontFamily:
-          "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif",
+          "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
         backgroundColor: dark ? "#000000" : "#ffffff",
       }}
     >

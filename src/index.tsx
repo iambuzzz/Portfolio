@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React from "react";
 import { wallpaperSrc } from "~/utils";
 import { createRoot } from "react-dom/client";
@@ -64,12 +65,12 @@ export default function App() {
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
 
-  const { dark, getWallpaper, iconStyle, tintWindows } = useStore((s) => ({
+  const { dark, getWallpaper, iconStyle, tintWindows } = useStore(useShallow((s) => ({
     dark: s.dark,
     getWallpaper: s.getWallpaper,
     iconStyle: s.iconStyle,
     tintWindows: s.tintWindows,
-  }));
+  })));
   const activeWallpaper = getWallpaper();
 
   // Sync the persisted appearance to the <html> dark class on mount.

@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { useMotionValue } from "framer-motion";
 import { motion } from "framer-motion";
 import { apps } from "~/configs";
@@ -23,10 +24,10 @@ export default function Dock({
   toggleLaunchpad,
   hide
 }: DockProps) {
-  const { dockSize, dockMag } = useStore((state) => ({
+  const { dockSize, dockMag } = useStore(useShallow((state) => ({
     dockSize: state.dockSize,
     dockMag: state.dockMag
-  }));
+  })));
 
   const [bouncingApp, setBouncingApp] = useState<string | null>(null);
 

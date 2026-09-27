@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React, { useRef } from "react";
 import Slider from "react-rangeslider";
 import "react-rangeslider/lib/index.css";
@@ -114,7 +115,7 @@ export default function ControlCenterMenu({
   btnRef
 }: CCMProps) {
   const controlCenterRef = useRef<HTMLDivElement>(null);
-  const { dark, wifi, brightness, bluetooth, airdrop, fullscreen, volume, focusMode } = useStore(
+  const { dark, wifi, brightness, bluetooth, airdrop, fullscreen, volume, focusMode } = useStore(useShallow(
     (state) => ({
       dark: state.dark,
       wifi: state.wifi,
@@ -125,17 +126,17 @@ export default function ControlCenterMenu({
       volume: state.volume,
       focusMode: state.focusMode
     })
-  );
+  ));
 
   const { toggleWIFI, toggleBluetooth, toggleAirdrop, toggleDark, toggleFullScreen, toggleFocus } =
-    useStore((state) => ({
+    useStore(useShallow((state) => ({
       toggleWIFI: state.toggleWIFI,
       toggleBluetooth: state.toggleBluetooth,
       toggleAirdrop: state.toggleAirdrop,
       toggleDark: state.toggleDark,
       toggleFullScreen: state.toggleFullScreen,
       toggleFocus: state.toggleFocus
-    }));
+    })));
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
 

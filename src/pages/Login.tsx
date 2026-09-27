@@ -1,4 +1,5 @@
 import React from "react";
+import { wallpaperSrc } from "~/utils";
 import { user } from "~/configs";
 import type { MacActions } from "~/types";
 import { format } from "date-fns";
@@ -39,9 +40,7 @@ export default function Login(props: MacActions) {
     <div
       className="size-full login text-center relative overflow-hidden"
       style={{
-        background: `url(${
-          dark ? activeWallpaper.night : activeWallpaper.day
-        }) center/cover no-repeat`,
+        background: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)}) center/cover no-repeat`,
       }}
       onClick={() => !isloginOpen && setIsLoginOpen(true)}
     >

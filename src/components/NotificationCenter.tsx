@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import CalendarWidget from "./widgets/CalendarWidget";
@@ -37,13 +38,13 @@ const CARD: React.CSSProperties = {
 
 export default function NotificationCenter({ show, onClose }: NotificationCenterProps) {
   const { notifications, dismissNotification, clearAllNotifications, focusMode, toggleFocus } =
-    useStore((s) => ({
+    useStore(useShallow((s) => ({
       notifications: s.notifications,
       dismissNotification: s.dismissNotification,
       clearAllNotifications: s.clearAllNotifications,
       focusMode: s.focusMode,
       toggleFocus: s.toggleFocus,
-    }));
+    })));
 
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;

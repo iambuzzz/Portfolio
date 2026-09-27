@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import React from "react";
 import { format } from "date-fns";
 import { AnimatePresence } from "framer-motion";
@@ -88,15 +89,15 @@ const TopBar = (props: TopBarProps) => {
   const { winWidth, winHeight } = useWindowSize();
   const isMobile = winWidth < 768;
 
-  const { volume, wifi } = useStore((state) => ({
+  const { volume, wifi } = useStore(useShallow((state) => ({
     volume: state.volume,
     wifi: state.wifi
-  }));
-  const { toggleFullScreen, setVolume, setBrightness } = useStore((state) => ({
+  })));
+  const { toggleFullScreen, setVolume, setBrightness } = useStore(useShallow((state) => ({
     toggleFullScreen: state.toggleFullScreen,
     setVolume: state.setVolume,
     setBrightness: state.setBrightness
-  }));
+  })));
 
   useInterval(() => {
     setState({

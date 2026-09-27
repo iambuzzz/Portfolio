@@ -402,7 +402,7 @@ export default function AppStore() {
         ) : (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--c-text-tertiary)" }}>
             <div style={{ textAlign: "center" }}>
-                <span className="i-ph:cone" style={{ width: "48px", height: "48px", marginBottom: "16px" }} />
+                <span className="i-ph:traffic-cone" style={{ width: "48px", height: "48px", marginBottom: "16px" }} />
                 <h2 style={{ fontSize: "20px", fontWeight: 600 }}>Under Construction</h2>
                 <p style={{ fontSize: "14px" }}>This section is currently being updated.</p>
             </div>

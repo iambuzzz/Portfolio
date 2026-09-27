@@ -30,27 +30,6 @@
   src: local("Avenir Next LT Pro DemiIt"), url("./fonts/AvenirNextLTPro-DemiItalic.woff") format("woff");
 }
 
-/* ----------------------------------------------------------------
-   Inter — free, OFL-licensed SF Pro look-alike (variable).
-   Kept AFTER -apple-system so genuine SF renders on Apple devices
-   and Inter provides the closest match everywhere else.
-   ---------------------------------------------------------------- */
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/InterVariable.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Inter";
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/InterVariable-Italic.woff2") format("woff2");
-}
-
 .font-avenir {
   font-family: var(--font-avenir);
 }
@@ -59,12 +38,11 @@
   font-family: var(--font-mono);
 }
 
-/* Shared macOS UI text stack: real SF on Apple, Inter substitute elsewhere */
+/* Shared macOS UI text stack */
 body:not(pre) {
   font-family: var(--font-system);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11' 1, 'ss01' 1; /* Inter: single-story a / SF-like alternates */
   cursor: default;
   letter-spacing: -0.01em;
 }
