@@ -1,0 +1,186 @@
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  font-style: normal;
+  font-weight: normal;
+  src: local("Avenir Next LT Pro Regular"), url("./fonts/AvenirNextLTPro-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  font-style: italic;
+  font-weight: normal;
+  src: local("Avenir Next LT Pro It"), url("./fonts/AvenirNextLTPro-Italic.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  font-style: normal;
+  font-weight: bold;
+  src: local("Avenir Next LT Pro Demi"), url("./fonts/AvenirNextLTPro-Demi.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  font-style: italic;
+  font-weight: bold;
+  src: local("Avenir Next LT Pro DemiIt"), url("./fonts/AvenirNextLTPro-DemiItalic.woff") format("woff");
+}
+
+/* ----------------------------------------------------------------
+   Inter — free, OFL-licensed SF Pro look-alike (variable).
+   Kept AFTER -apple-system so genuine SF renders on Apple devices
+   and Inter provides the closest match everywhere else.
+   ---------------------------------------------------------------- */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable-Italic.woff2") format("woff2");
+}
+
+.font-avenir {
+  font-family: var(--font-avenir);
+}
+
+.font-terminal {
+  font-family: var(--font-mono);
+}
+
+/* Shared macOS UI text stack: real SF on Apple, Inter substitute elsewhere */
+body:not(pre) {
+  font-family: var(--font-system);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11' 1, 'ss01' 1; /* Inter: single-story a / SF-like alternates */
+  cursor: default;
+  letter-spacing: -0.01em;
+}
+
+/* macOS Display font for headings / large numerals */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: 'kern' 1, 'cv11' 1, 'ss01' 1;
+  letter-spacing: -0.02em;
+}
+
+/* Rounded variant for clock / playful large display surfaces */
+.font-rounded {
+  font-family: var(--font-rounded);
+  font-feature-settings: 'kern' 1;
+}
+
+/* Tabular nums for clock / counters / timers */
+.font-tabular {
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+}
+
+/* SF Pro Text */
+@font-face {
+  font-family: "SF Pro Text";
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/SF-Pro-Text-Regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Text";
+  font-style: normal;
+  font-weight: 500;
+  src: url("./fonts/SF-Pro-Text-Medium.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Text";
+  font-style: normal;
+  font-weight: 600;
+  src: url("./fonts/SF-Pro-Text-Semibold.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Text";
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/SF-Pro-Text-Bold.otf") format("opentype");
+}
+
+/* SF Pro Display */
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/SF-Pro-Display-Regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 500;
+  src: url("./fonts/SF-Pro-Display-Medium.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 600;
+  src: url("./fonts/SF-Pro-Display-Semibold.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/SF-Pro-Display-Bold.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 800;
+  src: url("./fonts/SF-Pro-Display-Heavy.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Display";
+  font-style: normal;
+  font-weight: 900;
+  src: url("./fonts/SF-Pro-Display-Black.otf") format("opentype");
+}
+
+/* SF Pro Rounded */
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/SF-Pro-Rounded-Regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 500;
+  src: url("./fonts/SF-Pro-Rounded-Medium.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 600;
+  src: url("./fonts/SF-Pro-Rounded-Semibold.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/SF-Pro-Rounded-Bold.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 800;
+  src: url("./fonts/SF-Pro-Rounded-Heavy.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Rounded";
+  font-style: normal;
+  font-weight: 900;
+  src: url("./fonts/SF-Pro-Rounded-Black.otf") format("opentype");
+}

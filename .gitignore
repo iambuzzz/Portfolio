@@ -1,0 +1,10 @@
+*.log
+.DS_Store
+.cache/
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+stats.html

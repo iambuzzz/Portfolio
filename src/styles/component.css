@@ -1,0 +1,511 @@
+/* ========================================
+   macOS 26 Tahoe — Liquid Glass Design System
+   ======================================== */
+
+:root {
+  /* Liquid Glass Core */
+  --lg-bg-clear: rgba(255, 255, 255, 0.18);
+  --lg-bg-tinted: rgba(255, 255, 255, 0.38);
+  --lg-bg-solid: rgba(255, 255, 255, 0.72);
+  --lg-bg-dock: rgba(255, 255, 255, 0.22);
+  --lg-bg-menu: rgba(255, 255, 255, 0.55);
+  --lg-bg-topbar: rgba(255, 255, 255, 0.001);
+
+  --lg-blur: blur(80px) saturate(220%);
+  --lg-blur-heavy: blur(120px) saturate(250%);
+  --lg-blur-light: blur(40px) saturate(180%);
+  --lg-blur-menu: blur(60px) saturate(200%);
+
+  --lg-border: 0.5px solid rgba(255, 255, 255, 0.28);
+  --lg-border-strong: 0.5px solid rgba(255, 255, 255, 0.4);
+  --lg-border-subtle: 0.5px solid rgba(255, 255, 255, 0.12);
+
+  --lg-refraction: brightness(1.04) contrast(1.02);
+  --lg-glow: 0 0 40px rgba(255, 255, 255, 0.06);
+  --lg-inner-highlight: inset 0 0.5px 0 rgba(255, 255, 255, 0.45);
+  --lg-inner-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* Shadows */
+  --shadow-window: 0 24px 80px rgba(0,0,0,0.22), 0 8px 30px rgba(0,0,0,0.12);
+  --shadow-window-focused: 0 28px 90px rgba(0,0,0,0.28), 0 10px 35px rgba(0,0,0,0.16);
+  --shadow-menu: 0 12px 40px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-dock: 0 8px 40px rgba(0,0,0,0.15), 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-tooltip: 0 4px 16px rgba(0,0,0,0.12);
+  --shadow-dynamic-island: 0 4px 24px rgba(0,0,0,0.3), 0 1px 6px rgba(0,0,0,0.15);
+
+  /* Tahoe Radii */
+  --radius-window: 14px;
+  --radius-menu: 16px;
+  --radius-dock: 22px;
+  --radius-control: 12px;
+  --radius-button: 8px;
+  --radius-island: 36px;
+  --radius-island-expanded: 24px;
+
+  /* Spring & Timing */
+  --spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --spring-snappy: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --spring-gentle: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-liquid: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  /* Typography */
+  --font-system: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  --font-rounded: 'SF Pro Rounded', -apple-system, ui-rounded, 'Inter', 'Helvetica Neue', sans-serif;
+  --font-avenir: 'Avenir Next LT Pro', 'Helvetica Neue', SFCompactRounded, -apple-system, Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', sans-serif;
+
+  /* Accent Colors */
+  --accent-blue: #007AFF;
+  --accent-purple: #AF52DE;
+  --accent-pink: #FF2D55;
+  --accent-red: #FF3B30;
+  --accent-orange: #FF9500;
+  --accent-yellow: #FFCC00;
+  --accent-green: #34C759;
+  --accent-graphite: #8E8E93;
+}
+
+/* Dark Mode */
+.dark {
+  --lg-bg-clear: rgba(30, 30, 30, 0.25);
+  --lg-bg-tinted: rgba(40, 40, 40, 0.45);
+  --lg-bg-solid: rgba(30, 30, 30, 0.78);
+  --lg-bg-dock: rgba(30, 30, 30, 0.3);
+  --lg-bg-menu: rgba(35, 35, 35, 0.65);
+  --lg-bg-topbar: rgba(0, 0, 0, 0.001);
+  --lg-border: 0.5px solid rgba(255, 255, 255, 0.1);
+  --lg-border-strong: 0.5px solid rgba(255, 255, 255, 0.18);
+  --lg-border-subtle: 0.5px solid rgba(255, 255, 255, 0.06);
+  --lg-inner-highlight: inset 0 0.5px 0 rgba(255, 255, 255, 0.12);
+  --lg-inner-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --lg-glow: 0 0 40px rgba(0, 0, 0, 0.15);
+}
+
+/* --------- Login --------- */
+.login input::placeholder {
+  @apply text-white;
+}
+
+/* --------- Spotlight --------- */
+.spotlight {
+  @apply fixed z-20 h-max top-1/4 -mt-16 w-165 -ml-82.5 left-1/2;
+  background: rgba(246, 246, 248, 0.85);
+  backdrop-filter: blur(72px) saturate(240%);
+  -webkit-backdrop-filter: blur(72px) saturate(240%);
+  box-shadow: var(--shadow-menu), var(--lg-inner-highlight);
+  border: var(--lg-border-strong);
+  border-radius: var(--radius-menu);
+}
+
+.dark .spotlight {
+  background: var(--lg-bg-menu);
+  border: var(--lg-border);
+}
+
+.spotlight input::placeholder {
+  @apply text-c-black/40;
+}
+
+.spotlight .spotlight-type {
+  @apply relative hstack pl-2.5 py-2 text-xs leading-none text-c-500 font-medium;
+}
+
+@media (max-width: 639px) {
+  .spotlight {
+    @apply w-full ml-0 left-0;
+  }
+}
+
+/* --------- App Window --------- */
+.window-bound {
+  width: 300%;
+  height: 200%;
+  left: -100%;
+}
+
+.innner-window {
+  height: calc(100% - 1.75rem);
+}
+
+.safari-content {
+  height: calc(100% - 2rem);
+}
+
+.traffic-lights .icon {
+  @apply hidden;
+}
+
+.traffic-lights:hover .icon {
+  @apply block;
+}
+
+.window-btn {
+  transition: filter 0.15s ease;
+}
+
+.window-btn:hover {
+  filter: brightness(0.85);
+}
+
+.window-btn:active {
+  filter: brightness(0.7);
+}
+
+/* --------- Dock (Liquid Glass) --------- */
+.dock ul {
+  box-shadow: var(--shadow-dock), var(--lg-inner-highlight), inset 0 -0.5px 0 rgba(0,0,0,0.06);
+  background: var(--lg-bg-dock);
+  backdrop-filter: var(--lg-blur-heavy);
+  -webkit-backdrop-filter: var(--lg-blur-heavy);
+  border: var(--lg-border);
+  border-top: var(--lg-border-strong);
+  border-radius: var(--radius-dock);
+  transition: box-shadow 0.3s ease;
+}
+
+.dark .dock ul {
+  background: var(--lg-bg-dock);
+  border: var(--lg-border);
+  border-top: 0.5px solid rgba(255,255,255,0.14);
+}
+
+.dock li .tooltip {
+  @apply hidden;
+  top: calc(-100% - 10px);
+}
+
+.dock li:hover .tooltip {
+  @apply block;
+  box-shadow: var(--shadow-tooltip), var(--lg-inner-highlight);
+  background: var(--lg-bg-tinted);
+  backdrop-filter: var(--lg-blur-light);
+  -webkit-backdrop-filter: var(--lg-blur-light);
+  border: var(--lg-border-strong);
+  border-radius: var(--radius-button);
+}
+
+.dark .dock li:hover .tooltip {
+  background: var(--lg-bg-tinted);
+  border: var(--lg-border);
+}
+
+/* --------- Slider --------- */
+.slider .rangeslider {
+  @apply bg-c-300 w-full h-7 shadow-none m-0 rounded-r-full border-t border-r border-b border-transparent;
+}
+
+.slider .rangeslider .rangeslider__fill {
+  @apply bg-c-100 shadow-none rounded-none;
+}
+
+.slider .rangeslider .rangeslider__handle {
+  @apply border border-c-300 outline-none size-7 text-white bg-white;
+  box-shadow: -3px 0px 8px 0px rgba(17, 17, 17, 0.15);
+}
+
+.slider .rangeslider .rangeslider__handle::after {
+  @apply hidden;
+}
+
+/* Switch Toggle */
+.switch-toggle {
+  @apply relative inline-block h-5.5 w-9.5;
+}
+
+.switch-toggle input {
+  @apply size-0 opacity-0;
+}
+
+.switch-toggle .slider-toggle {
+  @apply absolute rounded-full bg-gray-400/50 inset-0 cursor-pointer duration-300;
+}
+
+.switch-toggle .slider-toggle:before {
+  @apply content-[""] absolute rounded-full bg-white bottom-0.5 left-0.5 size-4.5 duration-300;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.switch-toggle input:checked + .slider-toggle {
+  @apply bg-blue-500;
+}
+
+.switch-toggle input:checked + .slider-toggle:before {
+  @apply translate-x-4;
+}
+
+.switch-toggle input:focus + .slider-toggle {
+  box-shadow: 0 0 1px #3b82f6;
+}
+
+/* --------- Menu Box --------- */
+.menu-box {
+  background: var(--lg-bg-menu);
+  backdrop-filter: var(--lg-blur-menu);
+  -webkit-backdrop-filter: var(--lg-blur-menu);
+  border: var(--lg-border);
+  border-top: var(--lg-border-strong);
+  box-shadow: var(--shadow-menu), var(--lg-inner-highlight-strong);
+  border-radius: var(--radius-menu);
+}
+
+.dark .menu-box {
+  background: var(--lg-bg-menu);
+  border: var(--lg-border);
+  border-top: 0.5px solid rgba(255,255,255,0.16);
+}
+
+/* --------- Control Center Grid --------- */
+.cc-grid {
+  background: var(--lg-bg-tinted);
+  backdrop-filter: var(--lg-blur-light);
+  -webkit-backdrop-filter: var(--lg-blur-light);
+  border-radius: var(--radius-control);
+  border: var(--lg-border-subtle);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.cc-grid:hover {
+  transform: scale(1.01);
+}
+
+.cc-grid:active {
+  transform: scale(0.98);
+}
+
+.dark .cc-grid {
+  background: rgba(50, 50, 50, 0.45);
+  border: var(--lg-border-subtle);
+}
+
+/* --------- Animations --------- */
+@keyframes windowOpen {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes windowClose {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes dockPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes dockReceive {
+  0% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.dock-bounce {
+  animation: dockPop 120ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dock-receive {
+  animation: dockReceive 350ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Dynamic Island */
+@keyframes islandPulse {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(1.02); }
+}
+
+@keyframes islandExpand {
+  from { width: 120px; height: 32px; border-radius: var(--radius-island); }
+  to { width: 360px; height: auto; border-radius: var(--radius-island-expanded); }
+}
+
+/* Notification Center */
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutToRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+/* Launchpad */
+@keyframes launchpadIn {
+  from { opacity: 0; transform: scale(1.15); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes launchpadOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.15); }
+}
+
+@keyframes launchpadIconIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.launchpad-enter {
+  animation: launchpadIn 0.3s var(--ease-out-expo) forwards;
+}
+
+.launchpad-exit {
+  animation: launchpadOut 0.25s ease-in forwards;
+  pointer-events: none;
+}
+
+.launchpad-icon-enter {
+  animation: launchpadIconIn 0.4s var(--spring-bounce) forwards;
+}
+
+/* --------- Liquid Glass Utility Classes --------- */
+.lg-panel {
+  background: var(--lg-bg-clear);
+  backdrop-filter: var(--lg-blur);
+  -webkit-backdrop-filter: var(--lg-blur);
+  border: var(--lg-border);
+  box-shadow: var(--lg-glow), var(--lg-inner-highlight);
+  border-radius: var(--radius-menu);
+}
+
+.lg-dock {
+  background: var(--lg-bg-dock);
+  backdrop-filter: var(--lg-blur-heavy);
+  -webkit-backdrop-filter: var(--lg-blur-heavy);
+  border: var(--lg-border);
+  box-shadow: var(--shadow-dock), var(--lg-inner-highlight);
+  border-radius: var(--radius-dock);
+}
+
+.lg-window {
+  box-shadow: var(--shadow-window), var(--lg-inner-highlight);
+  border: var(--lg-border-subtle);
+  border-top: 0.5px solid rgba(255,255,255,0.32);
+  border-radius: var(--radius-window);
+  overflow: hidden;
+}
+
+.lg-window:focus-within,
+.lg-window.focused {
+  box-shadow: var(--shadow-window-focused), var(--lg-inner-highlight-strong);
+  border-top: 0.5px solid rgba(255,255,255,0.42);
+}
+
+/* Photos app thumbnail label reveal */
+.photo-thumb:hover .photo-hover-label {
+  opacity: 1 !important;
+}
+
+/* ========================================
+   Shared macOS materials (used across apps)
+   ======================================== */
+
+/* --- macOS-style overlay scrollbars ---
+   Thin, rounded, translucent; track stays invisible. Applied globally
+   so every scrollable surface (Finder, Notes, Settings, Mail…) reads as
+   native macOS instead of the chunky platform default. */
+* {
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.26) transparent;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  min-height: 28px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+  background-clip: content-box;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: content-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Opt-out for surfaces that should never show a bar (e.g. the dock row) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* --- Accent-tinted text selection (matches macOS highlight) --- */
+::selection {
+  background: rgba(0, 122, 255, 0.28);
+}
+.dark ::selection {
+  background: rgba(10, 132, 255, 0.4);
+}
+
+/* ========================================
+   Appearance settings — driven by root data-attributes
+   (set in index.tsx from the System Settings → Appearance panel)
+   ======================================== */
+
+/* Window chrome tint. Default ON = wallpaper-tinted glass (current look);
+   OFF = neutral, less-saturated chrome. AppWindow reads --window-bar-bg. */
+:root {
+  --window-bar-bg: var(--lg-bg-tinted);
+}
+[data-tint-windows="off"] {
+  --window-bar-bg: rgba(250, 250, 252, 0.72);
+}
+.dark[data-tint-windows="off"],
+[data-tint-windows="off"].dark {
+  --window-bar-bg: rgba(46, 46, 48, 0.72);
+}
+
+/* Icon & widget style — applied to dock app icons.
+   Default: untouched. Dark: dimmed. Clear: glassy/desaturated.
+   Tinted: monochrome leaning on the accent. */
+[data-icon-style="dark"] .dock img {
+  filter: brightness(0.82) contrast(1.06);
+}
+[data-icon-style="clear"] .dock img {
+  filter: saturate(0.55) brightness(1.12) opacity(0.9);
+}
+[data-icon-style="tinted"] .dock img {
+  filter: grayscale(0.85) brightness(0.95) sepia(0.25) hue-rotate(180deg) saturate(1.3);
+}
