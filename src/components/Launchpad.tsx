@@ -87,9 +87,11 @@ export default function Launchpad({ show, toggleLaunchpad }: LaunchpadProps) {
     <AnimatePresence>
       {show && (
         <motion.div
-          className="z-30 size-full fixed overflow-hidden bg-center bg-cover"
+          className="size-full fixed overflow-hidden bg-center bg-cover"
           id="launchpad"
           style={{
+            // Above windows (60) and desktop widgets (55); only the Dock sits on top.
+            zIndex: 70,
             backgroundImage: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)})`
           }}
           onClick={() => { setOpenFolder(null); toggleLaunchpad(false); }}

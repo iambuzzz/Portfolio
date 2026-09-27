@@ -315,7 +315,7 @@ export default function Desktop(props: MacActions) {
         sleepMac={props.sleepMac}
         restartMac={props.restartMac}
         toggleSpotlight={toggleSpotlight}
-        hide={hideDockAndTopbar}
+        hide={hideDockAndTopbar || state.showLaunchpad}
         setSpotlightBtnRef={setSpotlightBtnRef}
         openApp={openApp}
         toggleNotificationCenter={toggleNotificationCenter}
@@ -324,7 +324,7 @@ export default function Desktop(props: MacActions) {
       />
 
       {/* Dynamic Island */}
-      <DynamicIsland hide={hideDockAndTopbar} />
+      <DynamicIsland hide={hideDockAndTopbar || state.showLaunchpad} />
 
       {/* Desktop widgets — draggable, removable, re-addable (right-click › Edit Widgets) */}
       {!isMobile && <DesktopWidgets />}

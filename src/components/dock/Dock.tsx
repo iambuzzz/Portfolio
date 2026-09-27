@@ -68,7 +68,7 @@ export default function Dock({
 
   return (
     <motion.div
-      className={`dock fixed inset-x-0 mx-2 sm:mx-auto bottom-2 w-full sm:w-max overflow-x-scroll sm:overflow-visible flex justify-center ${hide ? "z-0" : "z-50"}`}
+      className={`dock fixed inset-x-0 mx-2 sm:mx-auto bottom-2 w-full sm:w-max overflow-x-scroll sm:overflow-visible flex justify-center ${hide ? "z-0" : showLaunchpad ? "z-[80]" : "z-50"}`}
       initial={false}
       animate={{
         opacity: hide ? 0 : 1,
