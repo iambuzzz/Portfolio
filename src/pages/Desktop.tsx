@@ -2,7 +2,7 @@ import { useWallpaper } from "~/stores";
 import { useShallow } from "zustand/react/shallow";
 import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
-import { minMarginY, isFullScreen, enterFullScreen, exitFullScreen, wallpaperSrc } from "~/utils";
+import { minMarginY, isFullScreen, wallpaperSrc } from "~/utils";
 import AppLoading from "~/components/AppLoading";
 import AppErrorBoundary from "~/components/AppErrorBoundary";
 import type { MacActions } from "~/types";
@@ -92,16 +92,11 @@ export default function Desktop(props: MacActions) {
         toggleSpotlight();
       }
 
-      // Full screen: Cmd/Ctrl + F OR F11
-      if ((isCmdOrCtrl && e.key.toLowerCase() === 'f') || e.key === 'F11') {
+      // Full screen: exactly Cmd/Ctrl + F, or F11. Anything with Shift/Alt
+      // (e.g. Chrome's Cmd+Shift+F) is left to the browser.
+      if ((isCmdOrCtrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") || e.key === "F11") {
         e.preventDefault();
-        if (isFullScreen()) {
-          exitFullScreen();
-          useStore.getState().toggleFullScreen(false);
-        } else {
-          enterFullScreen();
-          useStore.getState().toggleFullScreen(true);
-        }
+        useStore.getState().toggleFullScreen(!isFullScreen());
       }
 
       // Brightness Down: Cmd/Ctrl + Down Arrow OR F1
@@ -126,6 +121,10 @@ export default function Desktop(props: MacActions) {
     window.addEventListener("launchpad:openSafari", handleOpenSafari);
     window.addEventListener("siri:openLaunchpad", handleOpenLaunchpad);
     window.addEventListener("keydown", handleKeyDown);
+    // Keep the Control Center toggle in sync when the visitor leaves full
+    // screen with Esc or the browser's own controls.
+    const handleFsChange = () => useStore.setState({ fullscreen: isFullScreen() });
+    document.addEventListener("fullscreenchange", handleFsChange);
     
     return () => {
       window.removeEventListener("app:open", handleAppOpen);
@@ -133,6 +132,7 @@ export default function Desktop(props: MacActions) {
       window.removeEventListener("launchpad:openSafari", handleOpenSafari);
       window.removeEventListener("siri:openLaunchpad", handleOpenLaunchpad);
       window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFsChange);
     };
   }, [state]);  // re-bind when state updates so closures are fresh
 

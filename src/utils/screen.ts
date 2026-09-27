@@ -10,32 +10,25 @@ interface FsDocument extends Document {
   msFullscreenElement?: Element;
 }
 
+// Plain Fullscreen API only. (We used to call navigator.keyboard.lock(), which
+// captures every key including Esc and browser shortcuts, so visitors couldn't
+// leave full screen without press-and-holding Esc.)
 export const enterFullScreen = async (): Promise<void> => {
-  if (!isFullScreen()) {
-    const element = document.documentElement as FsDocumentElement;
-    try {
-      if (element.requestFullscreen) await element.requestFullscreen();
-      else if (element.msRequestFullscreen) element.msRequestFullscreen();
-      else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
-      else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
-      
-      // Try to lock the keyboard to capture system keys like Cmd/Ctrl+W, Cmd/Ctrl+Space
-      if ('keyboard' in navigator && (navigator as any).keyboard && (navigator as any).keyboard.lock) {
-         await (navigator as any).keyboard.lock();
-      }
-    } catch (e) {
-      console.warn("Fullscreen or keyboard lock failed:", e);
-    }
+  if (isFullScreen()) return;
+  const element = document.documentElement as FsDocumentElement;
+  try {
+    if (element.requestFullscreen) await element.requestFullscreen();
+    else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+    else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
+    else if (element.msRequestFullscreen) element.msRequestFullscreen();
+  } catch {
+    // Needs a user gesture; ignore if the browser refuses.
   }
 };
 
 export const exitFullScreen = (): void => {
-  if (isFullScreen()) {
-    if ('keyboard' in navigator && (navigator as any).keyboard && (navigator as any).keyboard.unlock) {
-       (navigator as any).keyboard.unlock();
-    }
-    document.exitFullscreen();
-  }
+  if (!isFullScreen()) return;
+  document.exitFullscreen?.().catch(() => {});
 };
 
 export const isFullScreen = (): boolean => {
