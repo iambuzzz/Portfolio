@@ -5,6 +5,7 @@ import CalendarWidget from "./CalendarWidget";
 import WeatherWidget from "./WeatherWidget";
 import ClockWidget from "./ClockWidget";
 import BatteryWidget from "./BatteryWidget";
+import GitHubWidget from "./GitHubWidget";
 
 const MENU_BAR = 32;
 const DOCK_CLEARANCE = 90;
@@ -16,6 +17,8 @@ const renderWidget = (id: WidgetKind) => {
       return <CalendarWidget compact={false} />;
     case "weather":
       return <WeatherWidget compact={false} />;
+    case "github":
+      return <GitHubWidget />;
     case "clock":
       return <ClockWidget />;
     case "battery":
@@ -57,6 +60,8 @@ function DraggableWidget({ id, x, y, editing }: { id: WidgetKind; x: number; y: 
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startX: number; startY: number; moved: boolean } | null>(null);
   const [offset, setOffset] = useState<{ dx: number; dy: number } | null>(null);
+  // A drag ends with a click on the widget; swallow it so links don't open.
+  const justDragged = useRef(false);
   const [hovered, setHovered] = useState(false);
 
   const clampPos = (nx: number, ny: number) => {
@@ -90,6 +95,7 @@ function DraggableWidget({ id, x, y, editing }: { id: WidgetKind; x: number; y: 
     const d = drag.current;
     drag.current = null;
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    justDragged.current = !!d?.moved;
     if (d?.moved && offset) moveWidget(id, x + offset.dx, y + offset.dy);
     setOffset(null);
   };
@@ -119,6 +125,14 @@ function DraggableWidget({ id, x, y, editing }: { id: WidgetKind; x: number; y: 
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClickCapture={(e) => {
+        if (justDragged.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          justDragged.current = false;
+        }
+      }}
+      onDragStart={(e) => e.preventDefault()}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

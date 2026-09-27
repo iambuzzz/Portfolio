@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type WidgetKind = "calendar" | "weather" | "clock" | "battery";
+export type WidgetKind = "calendar" | "weather" | "github" | "clock" | "battery";
 
 export interface PlacedWidget {
   id: WidgetKind;
@@ -12,6 +12,7 @@ export interface PlacedWidget {
 export const WIDGET_CATALOG: { id: WidgetKind; name: string; description: string }[] = [
   { id: "calendar", name: "Calendar", description: "This month at a glance" },
   { id: "weather", name: "Weather", description: "Live weather and local time in Kota" },
+  { id: "github", name: "GitHub", description: "Live repos, followers and recent activity" },
   { id: "clock", name: "Clock", description: "Analog clock" },
   { id: "battery", name: "Batteries", description: "Your device's battery level" }
 ];
@@ -19,7 +20,8 @@ export const WIDGET_CATALOG: { id: WidgetKind; name: string; description: string
 // Default layout: Calendar + Weather in the top-left, like the Tahoe desktop.
 const DEFAULT_WIDGETS: PlacedWidget[] = [
   { id: "calendar", x: 16, y: 48 },
-  { id: "weather", x: 232, y: 48 }
+  { id: "weather", x: 232, y: 48 },
+  { id: "github", x: 448, y: 48 }
 ];
 
 interface WidgetState {

@@ -35,6 +35,8 @@ export default function Maps() {
   const [active, setActive] = useState<Place>(FAVOURITES[0]);
   const [results, setResults] = useState<Place[]>([]);
   const [status, setStatus] = useState<"" | "searching" | "none">("");
+  const [rootRef, rootWidth] = useElementWidth();
+  const narrow = rootWidth > 0 && rootWidth < 600;
 
   const shown = search.trim()
     ? FAVOURITES.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -107,14 +109,16 @@ export default function Maps() {
   );
 
   return (
-    <div className="app-theme" style={{ display: "flex", height: "100%", background: "var(--a-bg)", overflow: "hidden" }}>
+    <div ref={rootRef} className="app-theme" style={{ display: "flex", flexDirection: narrow ? "column" : "row", height: "100%", background: "var(--a-bg)", overflow: "hidden" }}>
       {/* Sidebar */}
       <div
         style={{
-          width: 230,
+          width: narrow ? "100%" : 230,
+          maxHeight: narrow ? "42%" : undefined,
           flexShrink: 0,
           background: "var(--a-bg-side)",
-          borderRight: "0.5px solid var(--a-border)",
+          borderRight: narrow ? "none" : "0.5px solid var(--a-border)",
+          borderBottom: narrow ? "0.5px solid var(--a-border)" : "none",
           display: "flex",
           flexDirection: "column",
           overflowY: "auto"

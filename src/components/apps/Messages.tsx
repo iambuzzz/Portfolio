@@ -75,6 +75,10 @@ const CONVERSATIONS: Conversation[] = [
 
 export default function MessagesApp() {
   const [activeConv, setActiveConv] = useState(CONVERSATIONS[0]);
+  // Phone-sized / narrow windows: iOS-style list → conversation navigation.
+  const [rootRef, rootWidth] = useElementWidth();
+  const narrow = rootWidth > 0 && rootWidth < 600;
+  const [narrowView, setNarrowView] = useState<"list" | "chat">("list");
   const [input, setInput] = useState("");
   const [conversations, setConversations] = useState(CONVERSATIONS);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -109,6 +113,7 @@ export default function MessagesApp() {
 
   return (
     <div className="app-theme"
+      ref={rootRef}
       style={{
         display: "flex",
         height: "100%",
@@ -118,10 +123,12 @@ export default function MessagesApp() {
         overflow: "hidden",
       }}
     >
+      {(!narrow || narrowView === "list") && (
+        <>
       {/* Sidebar */}
       <div
         style={{
-          width: "230px",
+          width: narrow ? "100%" : "230px",
           flexShrink: 0,
           borderRight: "0.5px solid var(--a-border)",
           background: "var(--a-bg-side)",
@@ -187,6 +194,7 @@ export default function MessagesApp() {
               key={conv.id}
               onClick={() => {
                 setActiveConv(conv);
+                setNarrowView("chat");
                 setConversations((prev) =>
                   prev.map((c) => (c.id === conv.id ? { ...c, unread: 0 } : c))
                 );
@@ -300,12 +308,17 @@ export default function MessagesApp() {
         </div>
       </div>
 
+        </>
+      )}
+
+      {(!narrow || narrowView === "chat") && (
+        <>
       {/* Chat area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Header */}
         <div
           style={{
-            padding: "10px 16px",
+            padding: narrow ? "10px 12px" : "10px 16px",
             borderBottom: "0.5px solid var(--a-border)",
             display: "flex",
             alignItems: "center",
@@ -450,6 +463,8 @@ export default function MessagesApp() {
           </button>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

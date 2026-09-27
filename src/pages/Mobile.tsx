@@ -2,6 +2,7 @@ import { useShallow } from "zustand/react/shallow";
 import { wallpaperSrc } from "~/utils";
 import React, { Suspense, useState, useRef } from "react";
 import AppLoading from "~/components/AppLoading";
+import AppErrorBoundary from "~/components/AppErrorBoundary";
 import { apps, launchpadApps } from "~/configs";
 import { MOBILE_DOCK_APPS } from "~/components/mobile/MobileDock";
 import { useStore, useWallpaper } from "~/stores";
@@ -198,7 +199,11 @@ export default function Mobile(props: MacActions) {
                  {(() => {
                     const app = apps.find(a => a.id === activeApp);
                     if (!app) return null;
-                    return <Suspense fallback={<AppLoading />}>{app.content}</Suspense>;
+                    return (
+                      <AppErrorBoundary name={app.title}>
+                        <Suspense fallback={<AppLoading />}>{app.content}</Suspense>
+                      </AppErrorBoundary>
+                    );
                  })()}
                </div>
 

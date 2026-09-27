@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
 import { minMarginY, isFullScreen, enterFullScreen, exitFullScreen, wallpaperSrc } from "~/utils";
 import AppLoading from "~/components/AppLoading";
+import AppErrorBoundary from "~/components/AppErrorBoundary";
 import type { MacActions } from "~/types";
 import DynamicIsland from "~/components/DynamicIsland";
 import NotificationCenter from "~/components/NotificationCenter";
@@ -234,11 +235,13 @@ export default function Desktop(props: MacActions) {
             key={`desktop-app-${app.id}`}
             className="fixed top-8 right-4 z-[1000] drop-shadow-2xl flex items-start justify-end"
           >
-            <Suspense fallback={null}>
-              {React.cloneElement(app.content as React.ReactElement, {
-                closeSiri: () => closeApp("siri"),
-              })}
-            </Suspense>
+            <AppErrorBoundary name="Siri">
+              <Suspense fallback={null}>
+                {React.cloneElement(app.content as React.ReactElement, {
+                  closeSiri: () => closeApp("siri"),
+                })}
+              </Suspense>
+            </AppErrorBoundary>
           </div>
         );
       }
@@ -269,7 +272,9 @@ export default function Desktop(props: MacActions) {
         <AnimatePresence key={`desktop-app-${app.id}`}>
           {state.showApps[app.id] && (
             <AppWindow {...windowProps}>
-              <Suspense fallback={<AppLoading />}>{app.content}</Suspense>
+              <AppErrorBoundary name={app.title}>
+                <Suspense fallback={<AppLoading />}>{app.content}</Suspense>
+              </AppErrorBoundary>
             </AppWindow>
           )}
         </AnimatePresence>

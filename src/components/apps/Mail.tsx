@@ -169,6 +169,10 @@ export default function Mail() {
   const [activeFolder, setActiveFolder] = useState("Inbox");
   const [search, setSearch] = useState("");
   const [composing, setComposing] = useState(false);
+  // Phone-sized / narrow windows: iOS-style list → message navigation.
+  const [rootRef, rootWidth] = useElementWidth();
+  const narrow = rootWidth > 0 && rootWidth < 640;
+  const [narrowView, setNarrowView] = useState<"list" | "message">("list");
 
   const filtered = search.trim()
     ? MESSAGES.filter(
@@ -183,8 +187,10 @@ export default function Mail() {
 
   return (
     <div className="app-theme"
+      ref={rootRef}
       style={{
         display: "flex",
+        position: "relative",
         height: "100%",
         
         background: "var(--a-bg)",
@@ -192,6 +198,8 @@ export default function Mail() {
         overflow: "hidden",
       }}
     >
+      {!narrow && (
+        <>
       {/* Sidebar — folders */}
       <div
         style={{
@@ -276,10 +284,15 @@ export default function Mail() {
         </button>
       </div>
 
+        </>
+      )}
+
+      {(!narrow || narrowView === "list") && (
+        <>
       {/* Message list */}
       <div
         style={{
-          width: "260px",
+          width: narrow ? "100%" : "260px",
           flexShrink: 0,
           borderRight: "0.5px solid var(--a-border)",
           background: "var(--a-bg)",
@@ -288,6 +301,19 @@ export default function Mail() {
           overflow: "hidden",
         }}
       >
+        {narrow && (
+          <div className="flex items-center justify-between" style={{ padding: "10px 12px 6px" }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "var(--a-text)" }}>Inbox</span>
+            <button
+              onClick={() => setComposing(true)}
+              aria-label="Compose"
+              className="flex-center"
+              style={{ width: 34, height: 34, borderRadius: "50%", background: "#007AFF", color: "#fff" }}
+            >
+              <span className="i-ph:note-pencil" style={{ width: 17, height: 17 }} />
+            </button>
+          </div>
+        )}
         {/* Search */}
         <div style={{ padding: "8px 10px", borderBottom: "0.5px solid var(--a-border)" }}>
           <div
@@ -321,7 +347,10 @@ export default function Mail() {
           {filtered.map((msg) => (
             <motion.div
               key={msg.id}
-              onClick={() => setSelected(msg.id)}
+              onClick={() => {
+                setSelected(msg.id);
+                setNarrowView("message");
+              }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               style={{
@@ -422,8 +451,22 @@ export default function Mail() {
         </div>
       </div>
 
+        </>
+      )}
+
+      {(!narrow || narrowView === "message") && (
+        <>
       {/* Message view */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {narrow && (
+          <button
+            onClick={() => setNarrowView("list")}
+            className="flex items-center"
+            style={{ gap: 2, padding: "10px 12px 0", color: "#007AFF", fontSize: 15 }}
+          >
+            <span className="i-ph:caret-left-bold" style={{ width: 15, height: 15 }} /> Inbox
+          </button>
+        )}
         {activeMsg ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -510,6 +553,9 @@ export default function Mail() {
         )}
       </div>
 
+        </>
+      )}
+
       {/* Compose overlay */}
       <AnimatePresence>
         {composing && (
@@ -520,9 +566,7 @@ export default function Mail() {
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             style={{
               position: "absolute",
-              bottom: "20px",
-              right: "20px",
-              width: "420px",
+              ...(narrow ? { inset: 0, borderRadius: 0 } : { bottom: "20px", right: "20px", width: "420px" }),
               background: "var(--a-bg)",
               borderRadius: "12px",
               boxShadow: "0 16px 60px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1)",

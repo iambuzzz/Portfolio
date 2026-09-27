@@ -37,6 +37,20 @@ function vercelApiDev(): Plugin {
   };
 }
 
+// Absolute site URL for Open Graph tags (social previews need absolute URLs).
+// Set VITE_SITE_URL for a custom domain; on Vercel the production domain is used.
+function siteUrl(): Plugin {
+  const url = (
+    process.env.VITE_SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:5173")
+  ).replace(/\/$/, "");
+  return {
+    name: "site-url",
+    // "pre" so it runs before Vite parses (and URL-decodes) the HTML.
+    transformIndexHtml: { order: "pre", handler: (html) => html.replace(/%SITE_URL%/g, url) }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Expose non-VITE_ env vars (GROQ_API_KEY) to the dev API functions only.
@@ -51,7 +65,8 @@ export default defineConfig(({ mode }) => {
         dts: "src/auto-imports.d.ts",
         dirs: ["src/hooks", "src/stores", "src/components/**"]
       }),
-      vercelApiDev()
+      vercelApiDev(),
+      siteUrl()
     ],
     resolve: {
       alias: {

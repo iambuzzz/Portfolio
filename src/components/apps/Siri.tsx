@@ -543,11 +543,12 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   let statusText = "";
   if (phase === "recording") statusText = "Listening...";
   else if (phase === "processing") statusText = "Thinking...";
-  else if (phase === "speaking") statusText = "Speaking...";
+  // While speaking, keep the answer on screen so it can be read along.
+  else if (phase === "speaking" && !responseText) statusText = "Speaking...";
 
   let boxText = responseText;
   if (!boxText && phase === "idle") {
-    boxText = 'Say "Hey Siri" or type your question below.';
+    boxText = `Tap the orb and speak, or type a question — try "What has ${profile.firstName} built?"`;
   }
 
   const isTypingMode = inputText.length > 0;
@@ -604,6 +605,24 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
             boxText
           )}
         </div>
+
+        {/* Type to Siri — for visitors who don't want to use the mic */}
+        <form
+          className="mt-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleTextInput(inputText);
+          }}
+        >
+          <input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            placeholder="Ask Siri…"
+            aria-label="Ask Siri"
+            className="w-full rounded-xl px-3 py-2 text-[14px] outline-none bg-black/5 dark:bg-white/10 text-black/90 dark:text-white placeholder-black/40 dark:placeholder-white/40"
+          />
+        </form>
 
         {/* Close Button on the Top-Right of the panel */}
         <button

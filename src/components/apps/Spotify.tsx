@@ -221,6 +221,7 @@ async function fetchTracks(q: string): Promise<Track[]> {
   const res = await fetch(`/api/music/search${key ? `?q=${encodeURIComponent(key)}` : ""}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
+  if (!Array.isArray(data.tracks)) throw new Error("Music search is unavailable right now.");
   cache.set(key, data.tracks);
   return data.tracks;
 }
@@ -238,7 +239,10 @@ function useTrending() {
 // ── App ──────────────────────────────────────────────────────────────────────
 type View = "home" | "search" | "liked";
 
-export default function Spotify({ width = 1000 }: { width?: number }) {
+export default function Spotify() {
+  // Measure ourselves: works in desktop windows and full-screen on phones.
+  const [rootRef, measured] = useElementWidth();
+  const width = measured || 1000;
   const [view, setView] = useState<View>("home");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Load>({ state: "idle", tracks: [] });
@@ -358,7 +362,7 @@ export default function Spotify({ width = 1000 }: { width?: number }) {
   );
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: "#000", color: C.text, fontFamily: "var(--font-system)" }}>
+    <div ref={rootRef} style={{ height: "100%", display: "flex", flexDirection: "column", background: "#000", color: C.text, fontFamily: "var(--font-system)" }}>
       <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 8, padding: 8 }}>
         {/* Sidebar */}
         {!compact && (
@@ -449,7 +453,7 @@ function PlayerBar({ compact }: { compact: boolean }) {
   const range: React.CSSProperties = { accentColor: GREEN, height: 4, cursor: "pointer" };
 
   return (
-    <div style={{ height: compact ? 64 : 76, flexShrink: 0, display: "flex", alignItems: "center", gap: 12, padding: "0 14px", background: "#000" }}>
+    <div style={{ height: compact ? 84 : 76, flexShrink: 0, display: "flex", alignItems: "center", gap: 12, padding: compact ? "0 14px 20px" : "0 14px", background: "#000" }}>
       <div className="flex items-center" style={{ gap: 10, width: compact ? "auto" : "30%", minWidth: 0, flex: compact ? 1 : undefined }}>
         {current ? (
           <>

@@ -73,7 +73,7 @@ function FeaturedCard({ app, index }: { app: AppEntry; index: number }) {
         overflow: "hidden",
         cursor: "pointer",
         flexShrink: 0,
-        width: "360px",
+        width: "min(360px, 80vw)",
         height: "260px",
         position: "relative",
         boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
@@ -222,9 +222,12 @@ const SIDEBAR_ITEMS = [
 
 export default function AppStore() {
   const [activeTab, setActiveTab] = useState("discover");
+  const [rootRef, rootWidth] = useElementWidth();
+  const narrow = rootWidth > 0 && rootWidth < 640;
 
   return (
     <div
+      ref={rootRef}
       style={{
         display: "flex",
         height: "100%",
@@ -233,6 +236,8 @@ export default function AppStore() {
         overflow: "hidden",
       }}
     >
+      {!narrow && (
+        <>
       {/* Sidebar - Liquid Glass */}
       <div
         className="mac-sidebar"
@@ -321,10 +326,13 @@ export default function AppStore() {
         </button>
       </div>
 
+        </>
+      )}
+
       {/* Main Content */}
       <div style={{ flex: 1, overflowY: "auto", background: "var(--c-bg)", position: "relative", WebkitFontSmoothing: "antialiased" }}>
         {activeTab === "discover" ? (
-          <div style={{ padding: "48px 56px", maxWidth: "1040px", margin: "0 auto" }}>
+          <div style={{ padding: narrow ? "20px 16px 40px" : "48px 56px", maxWidth: "1040px", margin: "0 auto" }}>
             
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", borderBottom: "0.5px solid var(--c-border)", paddingBottom: "16px" }}>
