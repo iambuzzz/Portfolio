@@ -1,7 +1,7 @@
 import React from "react";
 import { user } from "~/configs";
 import type { MacActions } from "~/types";
-import moment from "moment";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login(props: MacActions) {
@@ -11,15 +11,15 @@ export default function Login(props: MacActions) {
   const getWallpaper = useStore((state) => state.getWallpaper);
   const activeWallpaper = getWallpaper();
   const [isloginOpen, setIsLoginOpen] = useState(false);
-  const [time, setTime] = useState(moment().format("h:mm"));
-  const [period, setPeriod] = useState(moment().format("A"));
-  const [date, setDate] = useState(moment().format("dddd, MMMM D"));
+  const [time, setTime] = useState(format(new Date(), "h:mm"));
+  const [period, setPeriod] = useState(format(new Date(), "a").toUpperCase());
+  const [date, setDate] = useState(format(new Date(), "EEEE, MMMM d"));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime(moment().format("h:mm"));
-      setPeriod(moment().format("A"));
-      setDate(moment().format("dddd, MMMM D"));
+      setTime(format(new Date(), "h:mm"));
+      setPeriod(format(new Date(), "a").toUpperCase());
+      setDate(format(new Date(), "EEEE, MMMM d"));
     }, 1000);
 
     return () => clearInterval(interval);

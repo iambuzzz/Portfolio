@@ -6,6 +6,7 @@
 export {}
 declare global {
   const AboutThisMacModal: typeof import('./components/AboutThisMacModal')['default']
+  const AppLoading: typeof import('./components/AppLoading')['default']
   const AppStore: typeof import('./components/apps/AppStore')['default']
   const AppWindow: typeof import('./components/AppWindow')['default']
   const AppleMenu: typeof import('./components/menus/AppleMenu')['default']

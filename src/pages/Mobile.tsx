@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { Suspense, useState, useRef } from "react";
+import AppLoading from "~/components/AppLoading";
 import { apps } from "~/configs";
 import { useStore } from "~/stores";
 import type { MacActions } from "~/types";
@@ -180,7 +181,7 @@ export default function Mobile(props: MacActions) {
                  {(() => {
                     const app = apps.find(a => a.id === activeApp);
                     if (!app) return null;
-                    return app.content;
+                    return <Suspense fallback={<AppLoading />}>{app.content}</Suspense>;
                  })()}
                </div>
 

@@ -10,7 +10,6 @@ import Boot from "~/pages/Boot";
 
 import "@unocss/reset/tailwind.css";
 import "uno.css";
-import "katex/dist/katex.min.css";
 import "~/styles/index.css";
 import { AudioProvider } from "~/context/AudioContext";
 

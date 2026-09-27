@@ -1,6 +1,7 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
-import { minMarginY, isFullScreen, enterFullScreen, exitFullScreen } from "~/utils";
+import { minMarginY, isFullScreen, enterFullScreen, exitFullScreen, wallpaperSrc } from "~/utils";
+import AppLoading from "~/components/AppLoading";
 import type { MacActions } from "~/types";
 import DynamicIsland from "~/components/DynamicIsland";
 import NotificationCenter from "~/components/NotificationCenter";
@@ -225,9 +226,11 @@ export default function Desktop(props: MacActions) {
             key={`desktop-app-${app.id}`}
             className="fixed top-8 right-4 z-[1000] drop-shadow-2xl flex items-start justify-end"
           >
-            {React.cloneElement(app.content as React.ReactElement, {
-              closeSiri: () => closeApp("siri"),
-            })}
+            <Suspense fallback={null}>
+              {React.cloneElement(app.content as React.ReactElement, {
+                closeSiri: () => closeApp("siri"),
+              })}
+            </Suspense>
           </div>
         );
       }
@@ -258,7 +261,7 @@ export default function Desktop(props: MacActions) {
         <AnimatePresence key={`desktop-app-${app.id}`}>
           {state.showApps[app.id] && (
             <AppWindow {...windowProps}>
-              {app.content}
+              <Suspense fallback={<AppLoading />}>{app.content}</Suspense>
             </AppWindow>
           )}
         </AnimatePresence>
@@ -267,7 +270,7 @@ export default function Desktop(props: MacActions) {
   };
 
   const bgStyle: any = {
-    backgroundImage: `url(${dark ? activeWallpaper.night : activeWallpaper.day})`,
+    backgroundImage: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     filter: `brightness(${(brightness as number) * 0.7 + 50}%)`

@@ -1,5 +1,28 @@
+import { lazy } from "react";
 import { appBarHeight } from "~/utils";
 import type { AppsData } from "~/types";
+
+// Each app is its own chunk, fetched the first time its window opens.
+const Finder = lazy(() => import("~/components/apps/Finder"));
+const Bear = lazy(() => import("~/components/apps/Bear"));
+const Typora = lazy(() => import("~/components/apps/Typora"));
+const Safari = lazy(() => import("~/components/apps/Safari"));
+const VSCode = lazy(() => import("~/components/apps/VSCode"));
+const FaceTime = lazy(() => import("~/components/apps/FaceTime"));
+const Terminal = lazy(() => import("~/components/apps/Terminal"));
+const Spotify = lazy(() => import("~/components/apps/Spotify"));
+const Siri = lazy(() => import("~/components/apps/Siri"));
+const Calculator = lazy(() => import("~/components/apps/Calculator"));
+const SystemSettings = lazy(() => import("~/components/apps/SystemSettings"));
+const Notes = lazy(() => import("~/components/apps/Notes"));
+const Music = lazy(() => import("~/components/apps/Music"));
+const Maps = lazy(() => import("~/components/apps/Maps"));
+const Messages = lazy(() => import("~/components/apps/Messages"));
+const Photos = lazy(() => import("~/components/apps/Photos"));
+const Clock = lazy(() => import("~/components/apps/Clock"));
+const Mail = lazy(() => import("~/components/apps/Mail"));
+const AppStore = lazy(() => import("~/components/apps/AppStore"));
+const YouTube = lazy(() => import("~/components/apps/YouTube"));
 
 const apps: AppsData[] = [
   {
