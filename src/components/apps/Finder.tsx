@@ -100,7 +100,6 @@ const FILESYSTEM: Record<string, FileItem[]> = {
       icon: "/img/icons/sf-icons/sound.svg",
       color: "#FF2D55",
       children: [
-        { id: "faded", name: "faded.m4a", kind: "file", ext: "m4a", size: "2.6 MB", date: "Today", icon: "/img/icons/sf-icons/sound.svg", url: "/music/faded.m4a" },
         { id: "samantha", name: "Samantha (Legacy).m4a", kind: "file", ext: "m4a", size: "42 KB", date: "Today", icon: "/img/icons/sf-icons/sound.svg", url: "/music/Samantha (Legacy)-2024_08_12-6.m4a" },
       ],
     },

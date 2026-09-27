@@ -12,7 +12,6 @@ export {
   BearMdData,
   BearData,
   LaunchpadData,
-  MusicData,
   TerminalData,
   UserData,
   WallpaperData,

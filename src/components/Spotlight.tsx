@@ -19,7 +19,7 @@ const appLibraryCategories = [
   },
   {
     name: "Entertainment",
-    apps: ["music", "photos"]
+    apps: ["spotify", "photos"]
   },
   {
     name: "Utilities",

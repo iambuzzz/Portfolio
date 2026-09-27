@@ -85,7 +85,7 @@ const TopBar = (props: TopBarProps) => {
     showAppleMenu: false
   });
 
-  const { audio, audioState, controls, audioRef } = useAudioContext();
+  const { audioState, controls } = useAudioContext();
   const { winWidth, winHeight } = useWindowSize();
   const isMobile = winWidth < 768;
 

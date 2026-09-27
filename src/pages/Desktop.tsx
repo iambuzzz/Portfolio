@@ -120,11 +120,17 @@ export default function Desktop(props: MacActions) {
       }
     };
 
+    const handleAppOpen = (e: Event) => openApp((e as CustomEvent<string>).detail);
+    const handleAppClose = (e: Event) => closeApp((e as CustomEvent<string>).detail);
+    window.addEventListener("app:open", handleAppOpen);
+    window.addEventListener("app:close", handleAppClose);
     window.addEventListener("launchpad:openSafari", handleOpenSafari);
     window.addEventListener("siri:openLaunchpad", handleOpenLaunchpad);
     window.addEventListener("keydown", handleKeyDown);
     
     return () => {
+      window.removeEventListener("app:open", handleAppOpen);
+      window.removeEventListener("app:close", handleAppClose);
       window.removeEventListener("launchpad:openSafari", handleOpenSafari);
       window.removeEventListener("siri:openLaunchpad", handleOpenLaunchpad);
       window.removeEventListener("keydown", handleKeyDown);
@@ -201,6 +207,8 @@ export default function Desktop(props: MacActions) {
         if (win) {
           win.style.transform = `translate(${win.style.getPropertyValue("--window-transform-x")}, ${win.style.getPropertyValue("--window-transform-y")}) scale(1)`;
           win.style.transition = "ease-in 0.3s";
+          // Drop the transition once restored, or every later drag lags behind the cursor.
+          setTimeout(() => (win.style.transition = ""), 320);
         }
         minApps[id] = false;
       }

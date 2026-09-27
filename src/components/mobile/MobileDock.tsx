@@ -3,8 +3,10 @@ import React from "react";
 import { apps } from "~/configs";
 import { useStore } from "~/stores";
 
+export const MOBILE_DOCK_APPS = ["about", "messages", "safari", "spotify"];
+
 export default function MobileDock({ openApp }: { openApp: (id: string) => void }) {
-  const dockApps = ["facetime", "messages", "safari", "music"];
+  const dockApps = MOBILE_DOCK_APPS;
 
   const { dark, iconStyle } = useStore(useShallow((s) => ({
     dark: s.dark,

@@ -1,4 +1,4 @@
-// Shared protections for the Groq proxy: same-origin only, per-IP rate limit.
+// Shared protections for the API routes: same-origin only, per-IP rate limit.
 // The limiter is in-memory, so it is per edge instance (best effort). Swap in
 // Upstash Redis if the site ever gets abused.
 
@@ -6,14 +6,14 @@ const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 12;
 const hits = new Map<string, number[]>();
 
-export const json = (status: number, body: unknown): Response =>
+export const json = (status: number, body: unknown, cacheControl = "no-store"): Response =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+    headers: { "Content-Type": "application/json", "Cache-Control": cacheControl }
   });
 
-export function guard(req: Request): Response | null {
-  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+export function guard(req: Request, method: "GET" | "POST" = "POST"): Response | null {
+  if (req.method !== method) return json(405, { error: "Method not allowed" });
 
   // Browsers always send Origin on cross-site POSTs; reject other sites.
   const origin = req.headers.get("origin");
@@ -27,12 +27,13 @@ export function guard(req: Request): Response | null {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
   const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
+  const bucket = `${ip} ${new URL(req.url).pathname}`;
+  const recent = (hits.get(bucket) ?? []).filter((t) => now - t < WINDOW_MS);
   if (recent.length >= MAX_REQUESTS) {
     return json(429, { error: "Too many requests, try again in a minute." });
   }
   recent.push(now);
-  hits.set(ip, recent);
+  hits.set(bucket, recent);
   if (hits.size > 5000) hits.clear();
 
   return null;

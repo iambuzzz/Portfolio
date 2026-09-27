@@ -5,6 +5,7 @@ import { profile } from "~/data/profile";
 
 // Each app is its own chunk, fetched the first time its window opens.
 const Finder = lazy(() => import("~/components/apps/Finder"));
+const About = lazy(() => import("~/components/apps/About"));
 const Bear = lazy(() => import("~/components/apps/Bear"));
 const Typora = lazy(() => import("~/components/apps/Typora"));
 const Safari = lazy(() => import("~/components/apps/Safari"));
@@ -15,7 +16,7 @@ const Siri = lazy(() => import("~/components/apps/Siri"));
 const Calculator = lazy(() => import("~/components/apps/Calculator"));
 const SystemSettings = lazy(() => import("~/components/apps/SystemSettings"));
 const Notes = lazy(() => import("~/components/apps/Notes"));
-const Music = lazy(() => import("~/components/apps/Music"));
+const Spotify = lazy(() => import("~/components/apps/Spotify"));
 const Maps = lazy(() => import("~/components/apps/Maps"));
 const Messages = lazy(() => import("~/components/apps/Messages"));
 const Photos = lazy(() => import("~/components/apps/Photos"));
@@ -40,12 +41,24 @@ const apps: AppsData[] = [
     content: <Finder />,
   },
   {
+    id: "about",
+    title: "About Me",
+    desktop: true,
+    show: true,
+    width: 900,
+    height: 620,
+    minWidth: 420,
+    minHeight: 360,
+    y: -20,
+    img: "img/icons/about.svg",
+    content: <About />,
+  },
+  {
     id: "bear",
     title: "Bear",
     desktop: true,
     width: 860,
     height: 500,
-    show: true,
     hideOnMobile: true,
     y: -40,
     img: "img/icons/bear.png",
@@ -169,18 +182,18 @@ const apps: AppsData[] = [
     content: <Notes />,
   },
   {
-    id: "music",
-    title: "Music",
+    id: "spotify",
+    title: "Spotify",
     desktop: true,
-    width: 780,
-    height: 500,
-    minWidth: 580,
-    minHeight: 380,
+    width: 1100,
+    height: 680,
+    minWidth: 420,
+    minHeight: 420,
     x: -30,
-    y: 20,
-    img: "img/icons/music.png",
+    y: 10,
+    img: "img/icons/spotify.png",
     dockOnMobile: true,
-    content: <Music />,
+    content: <Spotify />,
   },
   {
     id: "maps",

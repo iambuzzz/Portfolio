@@ -2,7 +2,8 @@ import { useShallow } from "zustand/react/shallow";
 import { wallpaperSrc } from "~/utils";
 import React, { Suspense, useState, useRef } from "react";
 import AppLoading from "~/components/AppLoading";
-import { apps } from "~/configs";
+import { apps, launchpadApps } from "~/configs";
+import { MOBILE_DOCK_APPS } from "~/components/mobile/MobileDock";
 import { useStore, useWallpaper } from "~/stores";
 import type { MacActions } from "~/types";
 import { AnimatePresence, motion } from "framer-motion";
@@ -60,7 +61,7 @@ export default function Mobile(props: MacActions) {
     transition: "filter 0.3s ease",
   };
 
-  const dockApps = ["facetime", "messages", "safari", "music"];
+  const dockApps = MOBILE_DOCK_APPS;
 
   return (
     <div className="size-full overflow-hidden relative" style={bgStyle}>
@@ -155,6 +156,21 @@ export default function Mobile(props: MacActions) {
                          {app.id === 'finder' ? 'Files' : app.id === 'system-settings' ? 'Settings' : app.title}
                        </span>
                     </div>
+                  ))}
+                  {/* Projects: open the live sites */}
+                  {launchpadApps.map((project) => (
+                    <a
+                      key={project.id}
+                      href={project.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex flex-col items-center gap-1.5 active:opacity-70 transition-opacity"
+                    >
+                      <img src={`/${project.img}`} alt={project.title} className="w-[60px] h-[60px] object-cover rounded-[14px]" />
+                      <span className="text-white text-[11px] font-medium tracking-wide drop-shadow-md text-center whitespace-nowrap overflow-hidden text-ellipsis w-full px-0.5">
+                        {project.title}
+                      </span>
+                    </a>
                   ))}
                 </div>
              </div>

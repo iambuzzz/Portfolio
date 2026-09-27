@@ -4,6 +4,8 @@ import { useStore } from "~/stores";
 import { transcribeAudio, getGroqChatCompletion } from "~/utils/groq";
 import { profile } from "~/data/profile";
 import { SIRI_FALLBACK } from "~/data/siri";
+import { localAnswer } from "~/data/siriLocal";
+import { useMusicStore } from "~/stores/music";
 
 type SiriPhase = "idle" | "recording" | "processing" | "speaking" | "error";
 
@@ -26,7 +28,9 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
   // Always use Whisper (MediaRecorder + Groq API) — works in all browsers.
   // The native SpeechRecognition API is Chrome/Edge-only, so we skip it.
-  const useBrowserSTT = false;
+  // Free, instant browser speech recognition where available (Chrome, Edge,
+  // Safari); Groq Whisper via our proxy elsewhere, or if the browser's fails.
+  const [useBrowserSTT, setUseBrowserSTT] = useState<boolean>(!!SpeechRecognitionAPI);
 
   // Store & audio context (use controls.play/pause to keep state in sync with TopBar)
   const { controls } = useAudioContext();
@@ -65,30 +69,11 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
   //  DOM helpers 
   const openAppById = useCallback((id: string) => {
-    // console.log(`[DOM] Opening app: ${id}`);
-    const el = document.querySelector(`#dock-${id}`) as HTMLElement | null;
-    if (el) {
-      el.click();
-      // console.log(`[DOM]  Clicked #dock-${id}`);
-    } else {
-      // console.warn(`[DOM]  #dock-${id} not found`);
-    }
+    window.dispatchEvent(new CustomEvent("app:open", { detail: id }));
   }, []);
 
   const closeAppById = useCallback((id: string) => {
-    // console.log(`[DOM] Closing app: ${id}`);
-    const win = document.querySelector(`#window-${id}`) as HTMLElement | null;
-    if (win) {
-      const btn = win.querySelector("button.bg-red-500") as HTMLElement | null;
-      if (btn) {
-        btn.click();
-        // console.log(`[DOM]  Closed #window-${id}`);
-      } else {
-        // console.warn(`[DOM]  Close button not found in #window-${id}`);
-      }
-    } else {
-      // console.warn(`[DOM]  #window-${id} not found`);
-    }
+    window.dispatchEvent(new CustomEvent("app:close", { detail: id }));
   }, []);
 
   //  Download resume 
@@ -116,14 +101,13 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       }
 
       case "play_music": {
-        try {
-          // Use controls.play() so audioState syncs with TopBar control center
-          await controls.play();
-          // console.log("[Tool]  Music playing (synced with controls)");
-        } catch (err) {
-          // console.error("[Tool]  Play failed:", err);
+        // Resume the current song, or open Spotify if nothing is queued yet.
+        if (useMusicStore.getState().queue.length) {
+          controls.play();
+          return "Playing music now.";
         }
-        return "Playing music now.";
+        openAppById("spotify");
+        return "Opening Spotify — search for any song!";
       }
 
       case "pause_music": {
@@ -300,11 +284,14 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       // console.log("[Agent] Final reply:", reply);
       setResponseText(reply);
       speakText(reply);
-    } catch (err: any) {
-      const busy = /\b(429|503)\b/.test(String(err?.message));
-      const msg = busy
-        ? "I'm taking a quick break — try again in a minute!"
-        : SIRI_FALLBACK;
+    } catch {
+      // AI unavailable (no key, rate limit, offline): answer locally.
+      const local = localAnswer(userText);
+      let msg = SIRI_FALLBACK;
+      if (local) {
+        const toolResult = local.tool ? await executeTool(local.tool.name, local.tool.args ?? {}) : "";
+        msg = local.reply || toolResult;
+      }
       setResponseText(msg);
       speakText(msg);
     }
@@ -361,6 +348,9 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       // console.error("[BrowserSTT] Error:", event.error);
       if (event.error === "no-speech") {
         setResponseText("I didn't hear anything. Please try again.");
+      } else if (["network", "service-not-allowed", "language-not-supported"].includes(event.error)) {
+        setUseBrowserSTT(false);
+        setResponseText("Tap Siri again to talk, or type your question below.");
       } else if (event.error === "not-allowed") {
         setResponseText("Microphone access denied. Please allow permissions.");
       } else {
@@ -421,7 +411,11 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
           await handleTranscription(text);
         } catch (err: any) {
           // console.error("[Whisper] Error:", err);
-          setResponseText("Transcription failed.");
+          setResponseText(
+            /\b503\b/.test(String(err?.message))
+              ? "Voice isn't set up here yet — type your question below instead."
+              : "I couldn't make that out. Try again, or type your question below."
+          );
           setPhase("error");
         }
       };

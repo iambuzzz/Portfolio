@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import music from "~/configs/music";
+import { useNowPlaying } from "~/stores/music";
 import { useAudioContext } from "~/context/AudioContext";
 
 type IslandState = "idle" | "compact" | "expanded";
@@ -25,6 +25,7 @@ export default function DynamicIsland({ currentApp }: DynamicIslandProps) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { audioState, controls } = useAudioContext();
+  const music = useNowPlaying();
 
   // Auto-collapse after expand
   useEffect(() => {

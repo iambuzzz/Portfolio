@@ -32,7 +32,7 @@ You can reach me at:
 • GitHub: ${profile.socials.github}
 • LinkedIn: ${profile.socials.linkedin}
 
-My résumé is in Finder, or just ask Siri.
+Click Compose to send me a message right here — it lands straight in my inbox.\nMy résumé is in Finder, or just ask Siri.
 
 — ${profile.firstName}`,
     time: "Now",
@@ -61,6 +61,108 @@ GitHub: ${p.github}`,
 ];
 
 const FOLDERS = ["Inbox", "Sent", "Drafts", "Starred", "Trash"];
+
+// Sends visitor messages to my inbox via Web3Forms (free, client-side by
+// design; the access key only allows sending to my own address). Without a
+// key it falls back to opening the visitor's mail app.
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined;
+
+function ContactForm({ onDone }: { onDone: () => void }) {
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!WEB3FORMS_KEY) {
+      const body = `${form.message}\n\n— ${form.name} (${form.email})`;
+      window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(form.subject)}&body=${encodeURIComponent(body)}`;
+      return;
+    }
+    setStatus("sending");
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `[Portfolio] ${form.subject || "New message"}`,
+          from_name: form.name,
+          name: form.name,
+          email: form.email,
+          replyto: form.email,
+          message: form.message,
+          botcheck: (e.currentTarget.elements.namedItem("botcheck") as HTMLInputElement)?.checked ?? false
+        })
+      });
+      const data = await res.json();
+      setStatus(data.success ? "sent" : "error");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  const field: React.CSSProperties = { flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "var(--a-text)" };
+  const row: React.CSSProperties = { padding: "8px 14px", borderBottom: "0.5px solid var(--a-border)", display: "flex", gap: 8, alignItems: "center" };
+  const label: React.CSSProperties = { fontSize: 12, color: "var(--a-text-2)", width: 56, flexShrink: 0 };
+
+  if (status === "sent") {
+    return (
+      <div className="flex flex-col items-center justify-center" style={{ padding: "36px 20px", gap: 10, textAlign: "center" }}>
+        <span className="i-ph:check-circle-fill" style={{ width: 44, height: 44, color: "#34C759" }} />
+        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--a-text)" }}>Message sent!</div>
+        <div style={{ fontSize: 13, color: "var(--a-text-2)" }}>Thanks, {form.name.split(" ")[0] || "friend"} — I'll reply to {form.email}.</div>
+        <button onClick={onDone} style={{ marginTop: 6, background: "#007AFF", color: "#fff", borderRadius: 7, padding: "6px 16px", fontSize: 13, fontWeight: 600 }}>
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column" }}>
+      <div style={row}>
+        <span style={label}>To:</span>
+        <span style={{ ...field, color: "var(--a-text-2)" }}>
+          {profile.name} &lt;{profile.email}&gt;
+        </span>
+      </div>
+      <div style={row}>
+        <span style={label}>From:</span>
+        <input required placeholder="Your name" value={form.name} onChange={set("name")} style={field} />
+        <input required type="email" placeholder="you@example.com" value={form.email} onChange={set("email")} style={field} />
+      </div>
+      <div style={row}>
+        <span style={label}>Subject:</span>
+        <input required value={form.subject} onChange={set("subject")} style={field} />
+      </div>
+      {/* Honeypot for spam bots — hidden from people. */}
+      <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" style={{ display: "none" }} />
+      <textarea
+        required
+        placeholder="Write your message..."
+        value={form.message}
+        onChange={set("message")}
+        style={{ ...field, resize: "none", lineHeight: 1.6, padding: "12px 14px", height: 170 }}
+      />
+      <div style={{ padding: "8px 14px", borderTop: "0.5px solid var(--a-border)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+        {status === "error" && (
+          <span style={{ fontSize: 12, color: "#FF3B30", marginRight: "auto" }}>
+            Couldn't send. Email me at {profile.email}.
+          </span>
+        )}
+        <button
+          type="submit"
+          disabled={status === "sending"}
+          style={{ background: "#007AFF", color: "#fff", borderRadius: 7, padding: "6px 16px", fontSize: 13, fontWeight: 600, opacity: status === "sending" ? 0.6 : 1 }}
+        >
+          {status === "sending" ? "Sending…" : "Send"}
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export default function Mail() {
   const [selected, setSelected] = useState<string>(MESSAGES[0].id);
@@ -457,68 +559,7 @@ export default function Mail() {
                 ×
               </button>
             </div>
-            {["To", "Subject"].map((label) => (
-              <div
-                key={label}
-                style={{
-                  padding: "8px 14px",
-                  borderBottom: "0.5px solid var(--a-border)",
-                  display: "flex",
-                  gap: "8px",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ fontSize: "12px", color: "var(--a-text-2)", width: "46px" }}>{label}:</span>
-                <input
-                  style={{
-                    flex: 1,
-                    border: "none",
-                    outline: "none",
-                    fontSize: "13px",
-                    background: "transparent",
-                    color: "var(--a-text)",
-                  }}
-                />
-              </div>
-            ))}
-            <textarea
-              placeholder="Write your message..."
-              style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                resize: "none",
-                fontSize: "13px",
-                lineHeight: "1.6",
-                color: "var(--a-text)",
-                padding: "12px 14px",
-                background: "transparent",
-                height: "180px",
-              }}
-            />
-            <div
-              style={{
-                padding: "8px 14px",
-                borderTop: "0.5px solid var(--a-border)",
-                display: "flex",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                style={{
-                  background: "#007AFF",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "7px",
-                  padding: "6px 16px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Send
-              </button>
-            </div>
+            <ContactForm onDone={() => setComposing(false)} />
           </motion.div>
         )}
       </AnimatePresence>

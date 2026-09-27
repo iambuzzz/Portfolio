@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import Slider from "react-rangeslider";
 import "react-rangeslider/lib/index.css";
 import { motion } from "framer-motion";
-import music from "~/configs/music";
+import { useNowPlaying } from "~/stores/music";
 import { useWindowSize } from "~/hooks/useWindowSize";
 import { useStore } from "~/stores";
 import { useClickOutside } from "~/hooks";
@@ -115,6 +115,7 @@ export default function ControlCenterMenu({
   btnRef
 }: CCMProps) {
   const controlCenterRef = useRef<HTMLDivElement>(null);
+  const music = useNowPlaying();
   const { dark, wifi, brightness, bluetooth, airdrop, fullscreen, volume, focusMode } = useStore(useShallow(
     (state) => ({
       dark: state.dark,

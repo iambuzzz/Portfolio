@@ -1,39 +1,41 @@
 import React, { createContext, useContext, ReactNode } from "react";
-import music from "~/configs/music";
+import { useShallow } from "zustand/react/shallow";
+import { useMusicStore } from "~/stores/music";
+
+// Thin adapter so the menu bar, Control Center, Dynamic Island and Siri keep a
+// simple play/pause/volume API. The actual player is the Spotify app.
 interface AudioContextType {
-  audio: HTMLAudioElement;
-  audioState: any;
+  audioState: { playing: boolean; volume: number };
   controls: {
-    play: () => Promise<void> | void;
-    pause: () => Promise<void> | void;
-    toggle: (play?: boolean) => Promise<void> | void;
+    play: () => void;
+    pause: () => void;
+    toggle: (play?: boolean) => void;
     volume: (value: number) => void;
   };
-  audioRef: React.RefObject<HTMLAudioElement>;
 }
 
-// Create the context with an initial undefined value
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
-// Create a provider component
 export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [audio, audioState, controls, audioRef] = useAudio({
-    src: music.audio, 
-    autoReplay: true
-  });
-
-  return (
-    <AudioContext.Provider value={{ audio, audioState, controls, audioRef }}>
-      {children}
-    </AudioContext.Provider>
+  const { playing, volume, toggle, setVolume } = useMusicStore(
+    useShallow((s) => ({ playing: s.playing, volume: s.volume, toggle: s.toggle, setVolume: s.setVolume }))
   );
+
+  const value: AudioContextType = {
+    audioState: { playing, volume: volume / 100 },
+    controls: {
+      play: () => toggle(true),
+      pause: () => toggle(false),
+      toggle: (play?: boolean) => toggle(play),
+      volume: (v: number) => setVolume(Math.round(v * 100))
+    }
+  };
+
+  return <AudioContext.Provider value={value}>{children}</AudioContext.Provider>;
 };
 
-// Custom hook to use the audio context
 export const useAudioContext = () => {
   const context = useContext(AudioContext);
-  if (!context) {
-    throw new Error("useAudioContext must be used within an AudioProvider");
-  }
+  if (!context) throw new Error("useAudioContext must be used within an AudioProvider");
   return context;
 };
