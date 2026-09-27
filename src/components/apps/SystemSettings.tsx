@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { wallpaperThumb } from "~/utils";
 import { useState } from "react";
 import { useStore } from "~/stores";
 import { useWindowSize } from "~/hooks";
@@ -331,7 +332,7 @@ const AppearancePanel = () => {
                     width: "100%",
                     height: "46px",
                     borderRadius: "8px",
-                    backgroundImage: `url(${wallpaper.day})`,
+                    backgroundImage: `url(${wallpaperThumb(wallpaper.day)})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative",
@@ -477,7 +478,7 @@ const WallpaperPanel = () => {
       >
         {wallpaperSets.map((set) => {
           const active = set.id === activeWallpaperSet;
-          const preview = dark ? set.night : set.day;
+          const preview = wallpaperThumb(dark ? set.night : set.day);
           return (
             <motion.button
               key={set.id}
@@ -683,12 +684,12 @@ const SoundPanel = () => {
   const [playFeedback, setPlayFeedback] = useState(true);
 
   const alertSounds = [
-    { label: "Samantha (Legacy)", value: "music/Samantha (Legacy)-2024_08_12-6.wav" },
-    { label: "Default Intro", value: "music/into.wav" },
+    { label: "Samantha (Legacy)", value: "music/Samantha (Legacy)-2024_08_12-6.m4a" },
+    { label: "Default Intro", value: "music/into.m4a" },
     { label: "iPhone Notification", value: "music/i_phone_notification.mp3" },
-    { label: "Error Alert", value: "music/error.wav" },
+    { label: "Error Alert", value: "music/error.m4a" },
     { label: "Siri Sound", value: "music/siri.mp3" },
-    { label: "Akash Intro", value: "music/akashintro.wav" },
+    { label: "Akash Intro", value: "music/akashintro.m4a" },
   ];
 
   const handleSoundChange = (val: string) => {
@@ -777,7 +778,7 @@ const DisplaysPanel = () => {
   const getWallpaper = useStore((s) => s.getWallpaper);
   const dark = useStore((s) => s.dark);
   const wallpaper = getWallpaper();
-  const bgUrl = dark ? wallpaper.night : wallpaper.day;
+  const bgUrl = wallpaperThumb(dark ? wallpaper.night : wallpaper.day);
 
   return (
     <div>

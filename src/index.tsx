@@ -1,4 +1,5 @@
 import React from "react";
+import { wallpaperSrc } from "~/utils";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "~/stores";
@@ -127,7 +128,7 @@ export default function App() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `url(${dark ? activeWallpaper.night : activeWallpaper.day})`,
+          backgroundImage: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           zIndex: 0,

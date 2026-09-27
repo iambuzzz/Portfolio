@@ -1,4 +1,5 @@
 import { launchpadApps } from "~/configs";
+import { wallpaperSrc } from "~/utils";
 import { useStore } from "~/stores";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowSize } from "~/hooks";
@@ -90,7 +91,7 @@ export default function Launchpad({ show, toggleLaunchpad }: LaunchpadProps) {
           className="z-30 size-full fixed overflow-hidden bg-center bg-cover"
           id="launchpad"
           style={{
-            backgroundImage: `url(${dark ? activeWallpaper.night : activeWallpaper.day})`
+            backgroundImage: `url(${wallpaperSrc(dark ? activeWallpaper.night : activeWallpaper.day)})`
           }}
           onClick={() => { setOpenFolder(null); toggleLaunchpad(false); }}
           initial={{ opacity: 0, scale: 1.15 }}

@@ -5,7 +5,7 @@ const music: MusicData = {
   artist: "Alan Walker / Jesper Borgen",
   cover:
     "/music/thumbnail.png",
-  audio: "music/faded.mp3"
+  audio: "music/faded.m4a"
 };
 
 export default music;

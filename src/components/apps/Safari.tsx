@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import websites from "~/configs/websites";
 import wallpapers from "~/configs/wallpapers";
-import { checkURL } from "~/utils";
+import { checkURL, wallpaperSrc } from "~/utils";
 import { useStore } from "~/stores";
 import type { SiteSectionData, SiteData } from "~/types";
 
@@ -79,7 +79,7 @@ const NavPage = ({ width, setGoURL }: NavProps) => {
         overflowY: "auto",
         backgroundPosition: "center",
         backgroundSize: "cover",
-        backgroundImage: `url(${dark ? wallpapers.night : wallpapers.day})`,
+        backgroundImage: `url(${wallpaperSrc(dark ? wallpapers.night : wallpapers.day)})`,
       }}
     >
       <div style={{ 
@@ -136,7 +136,7 @@ const NoInternetPage = () => {
         overflowY: "auto",
         backgroundPosition: "center",
         backgroundSize: "cover",
-        backgroundImage: `url(${dark ? wallpapers.night : wallpapers.day})`,
+        backgroundImage: `url(${wallpaperSrc(dark ? wallpapers.night : wallpapers.day)})`,
       }}
     >
       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--lg-bg-tinted)", backdropFilter: "var(--lg-blur-heavy)" }}>

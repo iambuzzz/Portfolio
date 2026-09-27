@@ -32,30 +32,30 @@ export const wallpaperSets: WallpaperSet[] = [
   {
     id: "tahoe",
     name: "macOS Tahoe",
-    day: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
-    night: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
-    thumbnail: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
+    day: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
+    night: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
+    thumbnail: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
   },
   {
     id: "tahoe-light",
     name: "Tahoe Light",
-    day: "wallpapers/macOS_Tahoe_LightDefault.jpg",
-    night: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
-    thumbnail: "wallpapers/macOS_Tahoe_LightDefault.jpg",
+    day: "wallpapers/macOS_Tahoe_LightDefault.webp",
+    night: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
+    thumbnail: "wallpapers/macOS_Tahoe_LightDefault.webp",
   },
   {
     id: "tahoe-beach",
     name: "Tahoe Beach",
-    day: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
-    night: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
-    thumbnail: "wallpapers/DefaultAerial_Tahoe_Beach.jpg",
+    day: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
+    night: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
+    thumbnail: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
   },
   {
     id: "ventura",
     name: "macOS Ventura",
-    day: "img/ui/macOS-ventura-light.jpg",
-    night: "img/ui/macOS-ventura-dark.jpg",
-    thumbnail: "img/ui/macOS-ventura-light.jpg",
+    day: "img/ui/macOS-ventura-light.webp",
+    night: "img/ui/macOS-ventura-dark.webp",
+    thumbnail: "img/ui/macOS-ventura-light.webp",
   },
 ];
 
@@ -155,7 +155,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
   // Notification sound
   notificationSound: loadSetting(
     "notificationSound",
-    "music/Samantha (Legacy)-2024_08_12-6.wav"
+    "music/Samantha (Legacy)-2024_08_12-6.m4a"
   ),
   setNotificationSound: (sound) => {
     saveSetting("notificationSound", sound);

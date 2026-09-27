@@ -9,7 +9,12 @@ export interface HTMLAudioProps {
 }
 
 export function useAudio(props: HTMLAudioProps) {
-  const element = new Audio(props.src);
+  // Create the element once; don't fetch the file until it is first played.
+  const [element] = useState(() => {
+    const audio = new Audio(props.src);
+    audio.preload = "none";
+    return audio;
+  });
   const ref = useRef<HTMLAudioElement>(element);
 
   const [state, setState] = useState<HTMLAudioState>({
@@ -68,6 +73,7 @@ export function useAudio(props: HTMLAudioProps) {
     const el = ref.current!;
 
     if (!el) return;
+    if (el.getAttribute("src") !== props.src) el.src = props.src;
 
     setState({
       volume: el.volume,
