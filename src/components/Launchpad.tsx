@@ -1,6 +1,6 @@
 import { launchpadApps } from "~/configs";
 import { wallpaperSrc } from "~/utils";
-import { useStore } from "~/stores";
+import { useStore, useWallpaper } from "~/stores";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowSize } from "~/hooks";
 import { useState } from "react";
@@ -17,8 +17,7 @@ const placeholderText = "Search";
 export default function Launchpad({ show, toggleLaunchpad }: LaunchpadProps) {
   const dark = useStore((state) => state.dark);
   const setSafariUrl = useStore((state) => state.setSafariUrl);
-  const getWallpaper = useStore((state) => state.getWallpaper);
-  const activeWallpaper = getWallpaper();
+  const activeWallpaper = useWallpaper();
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
 

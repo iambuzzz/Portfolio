@@ -92,6 +92,7 @@ declare global {
   const useStore: typeof import('./stores/index')['useStore']
   const useSyncExternalStore: typeof import('react')['useSyncExternalStore']
   const useTransition: typeof import('react')['useTransition']
+  const useWallpaper: typeof import('./stores/index')['useWallpaper']
   const useWidgetStore: typeof import('./stores/widgets')['useWidgetStore']
   const useWindowSize: typeof import('./hooks/useWindowSize')['useWindowSize']
   const weatherWidgetTsxTmp27497: typeof import('./components/widgets/WeatherWidget.tsx.tmp.27497.eb98ea4b5b23')['default']

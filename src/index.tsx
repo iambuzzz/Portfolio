@@ -3,7 +3,7 @@ import React from "react";
 import { wallpaperSrc } from "~/utils";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useStore } from "~/stores";
+import { useStore, useWallpaper } from "~/stores";
 
 import Desktop from "~/pages/Desktop";
 import Login from "~/pages/Login";
@@ -66,13 +66,12 @@ export default function App() {
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
 
-  const { dark, getWallpaper, iconStyle, tintWindows } = useStore(useShallow((s) => ({
+  const { dark, iconStyle, tintWindows } = useStore(useShallow((s) => ({
     dark: s.dark,
-    getWallpaper: s.getWallpaper,
     iconStyle: s.iconStyle,
     tintWindows: s.tintWindows,
   })));
-  const activeWallpaper = getWallpaper();
+  const activeWallpaper = useWallpaper();
 
   // Sync the persisted appearance to the <html> dark class on mount.
   useEffect(() => {

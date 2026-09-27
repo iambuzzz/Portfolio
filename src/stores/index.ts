@@ -14,3 +14,7 @@ export const useStore = create<DockSlice & SystemSlice & UserSlice & SettingsSli
     ...createNotificationsSlice(...a),
   })
 );
+
+/** Active wallpaper set; re-renders the caller when the wallpaper changes. */
+export const useWallpaper = () =>
+  useStore((s) => s.wallpaperSets.find((w) => w.id === s.activeWallpaperSet) ?? s.wallpaperSets[0]);

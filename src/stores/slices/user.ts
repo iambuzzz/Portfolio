@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import { profile } from "~/data/profile";
 
 export interface UserSlice {
   typoraMd: string;
@@ -11,7 +12,16 @@ export interface UserSlice {
 }
 
 export const createUserSlice: StateCreator<UserSlice> = (set) => ({
-  typoraMd: `# Hi \nThis is a simple clone of [Typora](https://typora.io/). Built on top of [Milkdown](https://milkdown.dev/), an open-source WYSIWYG markdown editor.`,
+  typoraMd: `# Scratchpad
+
+A markdown editor (built on Milkdown). **Type anything** — headings, lists, \`code\`, tables all work.
+
+## Ideas for you to try
+
+- [ ] Open **Spotify** and play a song
+- [ ] Ask **Siri** about ${profile.firstName}'s projects
+- [ ] Run \`sudo hire-me\` in **Terminal** 😉
+`,
   setTyporaMd: (v) => set(() => ({ typoraMd: v })),
   faceTimeImages: {},
   addFaceTimeImage: (v) =>

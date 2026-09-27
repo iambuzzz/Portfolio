@@ -80,12 +80,12 @@ export default function Mail() {
   const activeMsg = MESSAGES.find((m) => m.id === selected);
 
   return (
-    <div
+    <div className="app-theme"
       style={{
         display: "flex",
         height: "100%",
         
-        background: "#f5f5f7",
+        background: "var(--a-bg)",
         borderRadius: "0 0 14px 14px",
         overflow: "hidden",
       }}
@@ -95,8 +95,8 @@ export default function Mail() {
         style={{
           width: "160px",
           flexShrink: 0,
-          background: "rgba(235,235,240,0.98)",
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
+          background: "var(--a-bg-side)",
+          borderRight: "0.5px solid var(--a-border)",
           display: "flex",
           flexDirection: "column",
           padding: "8px 0",
@@ -106,7 +106,7 @@ export default function Mail() {
           style={{
             fontSize: "11px",
             fontWeight: 700,
-            color: "rgba(0,0,0,0.35)",
+            color: "var(--a-text-3)",
             textTransform: "uppercase",
             letterSpacing: "0.5px",
             padding: "6px 14px 4px",
@@ -127,7 +127,7 @@ export default function Mail() {
               alignItems: "center",
               justifyContent: "space-between",
               background: activeFolder === folder ? "rgba(0,122,255,0.12)" : "transparent",
-              color: activeFolder === folder ? "#007AFF" : "#1c1c1e",
+              color: activeFolder === folder ? "#007AFF" : "var(--a-text)",
               fontSize: "13px",
               transition: "background 0.15s ease",
             }}
@@ -179,21 +179,21 @@ export default function Mail() {
         style={{
           width: "260px",
           flexShrink: 0,
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
-          background: "rgba(248,248,252,0.99)",
+          borderRight: "0.5px solid var(--a-border)",
+          background: "var(--a-bg)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
         }}
       >
         {/* Search */}
-        <div style={{ padding: "8px 10px", borderBottom: "0.5px solid rgba(0,0,0,0.08)" }}>
+        <div style={{ padding: "8px 10px", borderBottom: "0.5px solid var(--a-border)" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "5px",
-              background: "rgba(0,0,0,0.07)",
+              background: "var(--a-fill)",
               borderRadius: "7px",
               padding: "5px 8px",
             }}
@@ -209,7 +209,7 @@ export default function Mail() {
                 outline: "none",
                 fontSize: "12px",
                 width: "100%",
-                color: "#1c1c1e",
+                color: "var(--a-text)",
               }}
             />
           </div>
@@ -224,7 +224,7 @@ export default function Mail() {
               animate={{ opacity: 1 }}
               style={{
                 padding: "10px 14px",
-                borderBottom: "0.5px solid rgba(0,0,0,0.06)",
+                borderBottom: "0.5px solid var(--a-border)",
                 cursor: "default",
                 background:
                   selected === msg.id
@@ -241,14 +241,14 @@ export default function Mail() {
                     width: "36px",
                     height: "36px",
                     borderRadius: "50%",
-                    background: msg.unread ? "rgba(0,122,255,0.15)" : "rgba(0,0,0,0.08)",
+                    background: msg.unread ? "rgba(0,122,255,0.15)" : "var(--a-fill)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: "16px",
                     flexShrink: 0,
                     fontWeight: 600,
-                    color: msg.unread ? "#007AFF" : "#666",
+                    color: msg.unread ? "#007AFF" : "var(--a-text-2)",
                   }}
                 >
                   {msg.avatar.startsWith("i-")
@@ -261,7 +261,7 @@ export default function Mail() {
                       style={{
                         fontSize: "13px",
                         fontWeight: msg.unread ? 700 : 500,
-                        color: "#1c1c1e",
+                        color: "var(--a-text)",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -270,14 +270,14 @@ export default function Mail() {
                     >
                       {msg.from}
                     </span>
-                    <span style={{ fontSize: "10px", color: "rgba(0,0,0,0.4)", flexShrink: 0, marginLeft: "6px" }}>
+                    <span style={{ fontSize: "10px", color: "var(--a-text-2)", flexShrink: 0, marginLeft: "6px" }}>
                       {msg.time}
                     </span>
                   </div>
                   <div
                     style={{
                       fontSize: "12px",
-                      color: "#1c1c1e",
+                      color: "var(--a-text)",
                       fontWeight: msg.unread ? 600 : 400,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -290,7 +290,7 @@ export default function Mail() {
                   <div
                     style={{
                       fontSize: "11px",
-                      color: "rgba(0,0,0,0.4)",
+                      color: "var(--a-text-2)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -336,14 +336,14 @@ export default function Mail() {
                 flexDirection: "column",
                 padding: "24px 28px",
                 overflowY: "auto",
-                background: "#fff",
+                background: "var(--a-bg)",
               }}
             >
               <h2
                 style={{
                   fontSize: "20px",
                   fontWeight: 700,
-                  color: "#1c1c1e",
+                  color: "var(--a-text)",
                   margin: "0 0 12px",
                 }}
               >
@@ -369,8 +369,8 @@ export default function Mail() {
                     : activeMsg.avatar}
                 </div>
                 <div>
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: "#1c1c1e" }}>{activeMsg.from}</div>
-                  <div style={{ fontSize: "11px", color: "rgba(0,0,0,0.4)" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--a-text)" }}>{activeMsg.from}</div>
+                  <div style={{ fontSize: "11px", color: "var(--a-text-2)" }}>
                     {activeMsg.fromEmail} · {activeMsg.time}
                   </div>
                 </div>
@@ -384,7 +384,7 @@ export default function Mail() {
                 style={{
                   fontSize: "14px",
                   lineHeight: "1.65",
-                  color: "#1c1c1e",
+                  color: "var(--a-text)",
                   whiteSpace: "pre-wrap",
                 }}
               >
@@ -399,7 +399,7 @@ export default function Mail() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "rgba(0,0,0,0.3)",
+              color: "var(--a-text-3)",
               fontSize: "14px",
             }}
           >
@@ -421,10 +421,10 @@ export default function Mail() {
               bottom: "20px",
               right: "20px",
               width: "420px",
-              background: "rgba(248,248,252,0.98)",
+              background: "var(--a-bg)",
               borderRadius: "12px",
               boxShadow: "0 16px 60px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1)",
-              border: "0.5px solid rgba(0,0,0,0.12)",
+              border: "0.5px solid var(--a-border)",
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
@@ -434,14 +434,14 @@ export default function Mail() {
             <div
               style={{
                 padding: "10px 14px",
-                background: "rgba(235,235,240,0.99)",
-                borderBottom: "0.5px solid rgba(0,0,0,0.08)",
+                background: "var(--a-bg-side)",
+                borderBottom: "0.5px solid var(--a-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "#1c1c1e" }}>New Message</span>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--a-text)" }}>New Message</span>
               <button
                 onClick={() => setComposing(false)}
                 style={{
@@ -449,7 +449,7 @@ export default function Mail() {
                   border: "none",
                   cursor: "pointer",
                   fontSize: "16px",
-                  color: "rgba(0,0,0,0.4)",
+                  color: "var(--a-text-2)",
                   lineHeight: 1,
                   padding: "2px",
                 }}
@@ -462,13 +462,13 @@ export default function Mail() {
                 key={label}
                 style={{
                   padding: "8px 14px",
-                  borderBottom: "0.5px solid rgba(0,0,0,0.06)",
+                  borderBottom: "0.5px solid var(--a-border)",
                   display: "flex",
                   gap: "8px",
                   alignItems: "center",
                 }}
               >
-                <span style={{ fontSize: "12px", color: "rgba(0,0,0,0.4)", width: "46px" }}>{label}:</span>
+                <span style={{ fontSize: "12px", color: "var(--a-text-2)", width: "46px" }}>{label}:</span>
                 <input
                   style={{
                     flex: 1,
@@ -476,7 +476,7 @@ export default function Mail() {
                     outline: "none",
                     fontSize: "13px",
                     background: "transparent",
-                    color: "#1c1c1e",
+                    color: "var(--a-text)",
                   }}
                 />
               </div>
@@ -490,7 +490,7 @@ export default function Mail() {
                 resize: "none",
                 fontSize: "13px",
                 lineHeight: "1.6",
-                color: "#1c1c1e",
+                color: "var(--a-text)",
                 padding: "12px 14px",
                 background: "transparent",
                 height: "180px",
@@ -499,7 +499,7 @@ export default function Mail() {
             <div
               style={{
                 padding: "8px 14px",
-                borderTop: "0.5px solid rgba(0,0,0,0.06)",
+                borderTop: "0.5px solid var(--a-border)",
                 display: "flex",
                 justifyContent: "flex-end",
               }}

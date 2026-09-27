@@ -1,3 +1,4 @@
+import { useWallpaper } from "~/stores";
 import React from "react";
 import { wallpaperSrc } from "~/utils";
 import { user } from "~/configs";
@@ -9,8 +10,7 @@ export default function Login(props: MacActions) {
   const [password, setPassword] = useState("");
   const [sign, setSign] = useState("Press enter to login");
   const dark = useStore((state) => state.dark);
-  const getWallpaper = useStore((state) => state.getWallpaper);
-  const activeWallpaper = getWallpaper();
+  const activeWallpaper = useWallpaper();
   const [isloginOpen, setIsLoginOpen] = useState(false);
   const [time, setTime] = useState(format(new Date(), "h:mm"));
   const [period, setPeriod] = useState(format(new Date(), "a").toUpperCase());

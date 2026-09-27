@@ -1,3 +1,4 @@
+import { useWallpaper } from "~/stores";
 import { useShallow } from "zustand/react/shallow";
 import React, { Suspense } from "react";
 import { apps, launchpadApps } from "~/configs";
@@ -58,15 +59,14 @@ export default function Desktop(props: MacActions) {
     useState<React.RefObject<HTMLDivElement> | null>(null);
   const [showAboutMac, setShowAboutMac] = useState(false);
 
-  const { dark, brightness, getWallpaper } = useStore(useShallow((s) => ({
+  const { dark, brightness } = useStore(useShallow((s) => ({
     dark: s.dark,
     brightness: s.brightness,
-    getWallpaper: s.getWallpaper,
   })));
 
   const { isMobile } = useWindowSize();
 
-  const activeWallpaper = getWallpaper();
+  const activeWallpaper = useWallpaper();
 
   const handleLaunchpadAppClick = (e: React.MouseEvent, link: string) => {
     e.stopPropagation();

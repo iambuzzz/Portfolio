@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import { profile } from "~/data/profile";
 
 export interface Notification {
   id: string;
@@ -23,29 +24,29 @@ export const createNotificationsSlice: StateCreator<NotificationsSlice> = (set) 
   notifications: [
     {
       id: "n1",
-      title: "Welcome back",
-      message: "Your macOS portfolio is ready.",
-      app: "Finder",
-      icon: "img/icons/finder.png",
-      timestamp: Date.now() - 1000 * 60 * 5,
+      title: `Hi, I'm ${profile.firstName} 👋`,
+      message: "Explore my projects in Launchpad, or ask Siri anything about me.",
+      app: "Messages",
+      icon: "img/icons/messages.png",
+      timestamp: Date.now() - 1000 * 60 * 2,
       read: false,
     },
     {
       id: "n2",
-      title: "New message",
-      message: "Hey! Check out the new features in the portfolio.",
-      app: "Messages",
-      icon: "img/icons/messages.png",
-      timestamp: Date.now() - 1000 * 60 * 30,
+      title: "Tip",
+      message: "Press ⌘/Ctrl + Space for Spotlight. Right-click the desktop to edit widgets.",
+      app: "Finder",
+      icon: "img/icons/finder.png",
+      timestamp: Date.now() - 1000 * 60 * 10,
       read: false,
     },
     {
       id: "n3",
-      title: "Calendar",
-      message: "Meeting with team at 3:00 PM",
-      app: "Calendar",
-      icon: "img/icons/calendar.png",
-      timestamp: Date.now() - 1000 * 60 * 60,
+      title: "Résumé",
+      message: "My résumé and certificates are in Finder › Documents.",
+      app: "Finder",
+      icon: "img/icons/finder.png",
+      timestamp: Date.now() - 1000 * 60 * 30,
       read: true,
     },
   ],

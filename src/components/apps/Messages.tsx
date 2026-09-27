@@ -108,12 +108,12 @@ export default function MessagesApp() {
   };
 
   return (
-    <div
+    <div className="app-theme"
       style={{
         display: "flex",
         height: "100%",
         
-        background: "rgba(248,248,250,0.99)",
+        background: "var(--a-bg)",
         borderRadius: "0 0 14px 14px",
         overflow: "hidden",
       }}
@@ -123,8 +123,8 @@ export default function MessagesApp() {
         style={{
           width: "230px",
           flexShrink: 0,
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
-          background: "rgba(242,242,247,0.98)",
+          borderRight: "0.5px solid var(--a-border)",
+          background: "var(--a-bg-side)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -133,7 +133,7 @@ export default function MessagesApp() {
         <div
           style={{
             padding: "10px",
-            borderBottom: "0.5px solid rgba(0,0,0,0.08)",
+            borderBottom: "0.5px solid var(--a-border)",
             display: "flex",
             alignItems: "center",
             gap: "8px",
@@ -145,7 +145,7 @@ export default function MessagesApp() {
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              background: "rgba(0,0,0,0.07)",
+              background: "var(--a-fill)",
               borderRadius: "9px",
               padding: "5px 9px",
             }}
@@ -159,7 +159,7 @@ export default function MessagesApp() {
                 outline: "none",
                 fontSize: "16px",
                 width: "100%",
-                color: "#1c1c1e",
+                color: "var(--a-text)",
               }}
             />
           </div>
@@ -234,7 +234,7 @@ export default function MessagesApp() {
                       height: 10,
                       borderRadius: "50%",
                       background: "#34C759",
-                      border: "2px solid rgba(242,242,247,0.98)",
+                      border: "2px solid var(--a-bg-side)",
                     }}
                   />
                 )}
@@ -246,7 +246,7 @@ export default function MessagesApp() {
                     style={{
                       fontSize: "13px",
                       fontWeight: conv.unread ? 700 : 500,
-                      color: "#1c1c1e",
+                      color: "var(--a-text)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -255,7 +255,7 @@ export default function MessagesApp() {
                   >
                     {conv.name}
                   </span>
-                  <span style={{ fontSize: "11px", color: "rgba(0,0,0,0.4)", flexShrink: 0 }}>
+                  <span style={{ fontSize: "11px", color: "var(--a-text-2)", flexShrink: 0 }}>
                     {conv.time}
                   </span>
                 </div>
@@ -263,7 +263,7 @@ export default function MessagesApp() {
                   <span
                     style={{
                       fontSize: "12px",
-                      color: conv.unread ? "#1c1c1e" : "rgba(0,0,0,0.4)",
+                      color: conv.unread ? "var(--a-text)" : "var(--a-text-2)",
                       fontWeight: conv.unread ? 500 : 400,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -306,11 +306,11 @@ export default function MessagesApp() {
         <div
           style={{
             padding: "10px 16px",
-            borderBottom: "0.5px solid rgba(0,0,0,0.08)",
+            borderBottom: "0.5px solid var(--a-border)",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            background: "rgba(248,248,250,0.99)",
+            background: "var(--a-bg)",
           }}
         >
           <div
@@ -330,7 +330,7 @@ export default function MessagesApp() {
               : activeConv.avatar}
           </div>
           <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "#1c1c1e" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--a-text)" }}>
               {activeConv.name}
             </div>
             {activeConv.online && (
@@ -374,8 +374,8 @@ export default function MessagesApp() {
                     background:
                       msg.from === "me"
                         ? "linear-gradient(135deg, #007AFF, #0055D4)"
-                        : "rgba(229,229,234,0.9)",
-                    color: msg.from === "me" ? "white" : "#1c1c1e",
+                        : "var(--a-bubble)",
+                    color: msg.from === "me" ? "white" : "var(--a-text)",
                     fontSize: "14px",
                     lineHeight: "1.4",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
@@ -394,11 +394,11 @@ export default function MessagesApp() {
         <div
           style={{
             padding: "10px 12px",
-            borderTop: "0.5px solid rgba(0,0,0,0.08)",
+            borderTop: "0.5px solid var(--a-border)",
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "rgba(248,248,250,0.99)",
+            background: "var(--a-bg)",
           }}
         >
           <div
@@ -406,7 +406,7 @@ export default function MessagesApp() {
               flex: 1,
               display: "flex",
               alignItems: "center",
-              background: "rgba(0,0,0,0.06)",
+              background: "var(--a-fill)",
               borderRadius: "20px",
               padding: "6px 14px",
               gap: "8px",
@@ -423,7 +423,7 @@ export default function MessagesApp() {
                 border: "none",
                 outline: "none",
                 fontSize: "16px",
-                color: "#1c1c1e",
+                color: "var(--a-text)",
               }}
             />
           </div>
@@ -434,14 +434,14 @@ export default function MessagesApp() {
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: input.trim() ? "#007AFF" : "rgba(0,0,0,0.15)",
+              background: input.trim() ? "#007AFF" : "var(--a-fill)",
               border: "none",
               cursor: input.trim() ? "pointer" : "default",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "14px",
-              color: input.trim() ? "white" : "rgba(0,0,0,0.3)",
+              color: input.trim() ? "white" : "var(--a-text-3)",
               flexShrink: 0,
               transition: "background 0.15s ease",
             }}

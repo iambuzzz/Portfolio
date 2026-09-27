@@ -1,348 +1,233 @@
 import { motion } from "framer-motion";
 
-const PLACES = [
-  { id: "1", name: "IIIT Kota", type: "University", lat: 25.2138, lng: 75.8648, color: "#007AFF" },
-  { id: "2", name: "Kota, Rajasthan", type: "City", lat: 25.2138, lng: 75.8648, color: "#FF9500" },
-  { id: "3", name: "Jagat Taran Golden Jubilee School", type: "School", lat: 25.4358, lng: 81.8463, color: "#34C759" },
-  { id: "4", name: "Prayagraj, Uttar Pradesh", type: "City", lat: 25.4358, lng: 81.8463, color: "#AF52DE" },
+interface Place {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  color: string;
+  /** Query used for "Directions" in Google Maps. */
+  query: string;
+}
+
+// IIIT Kota's campus isn't in OpenStreetMap yet, so it's shown at city level.
+const FAVOURITES: Place[] = [
+  { id: "iiit", name: "IIIT Kota", type: "University · Kota, Rajasthan", lat: 25.1737, lng: 75.8574, zoom: 12, color: "#007AFF", query: "IIIT Kota" },
+  { id: "kota", name: "Kota, Rajasthan", type: "City", lat: 25.1737, lng: 75.8574, zoom: 11, color: "#FF9500", query: "Kota, Rajasthan" },
+  { id: "school", name: "Jagat Taran Golden Jubilee School", type: "School · Prayagraj", lat: 25.454, lng: 81.859, zoom: 16, color: "#34C759", query: "Jagat Taran Golden Jubilee School, Prayagraj" },
+  { id: "prayagraj", name: "Prayagraj, Uttar Pradesh", type: "City", lat: 25.4381, lng: 81.8338, zoom: 11, color: "#AF52DE", query: "Prayagraj" }
 ];
+
+// Degrees of longitude visible at a given zoom in a ~700px wide map.
+const spanFor = (zoom: number) => (360 / Math.pow(2, zoom)) * 2.5;
+
+const embedUrl = (p: Place) => {
+  const dLng = spanFor(p.zoom);
+  const dLat = dLng * 0.6;
+  const bbox = [p.lng - dLng / 2, p.lat - dLat / 2, p.lng + dLng / 2, p.lat + dLat / 2].map((n) => n.toFixed(5)).join(",");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${p.lat},${p.lng}`;
+};
 
 export default function Maps() {
   const [search, setSearch] = useState("");
-  const [activePlace, setActivePlace] = useState(PLACES[0]);
-  const [mapStyle, setMapStyle] = useState<"standard" | "satellite" | "transit">("standard");
+  const [active, setActive] = useState<Place>(FAVOURITES[0]);
+  const [results, setResults] = useState<Place[]>([]);
+  const [status, setStatus] = useState<"" | "searching" | "none">("");
 
-  const filtered = search.trim()
-    ? PLACES.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : PLACES;
+  const shown = search.trim()
+    ? FAVOURITES.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+    : FAVOURITES;
 
-  // Simple SVG map representation
-  const MapView = () => (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-      {/* Map background */}
-      <div
+  // Free geocoding via OpenStreetMap Nominatim (no key; ~1 request/sec).
+  const geocode = async () => {
+    const q = search.trim();
+    if (!q) return;
+    setStatus("searching");
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}`);
+      const data: { lat: string; lon: string; display_name: string }[] = await res.json();
+      const found = data.map((r, i) => ({
+        id: `r${i}-${r.lat}`,
+        name: r.display_name.split(",")[0],
+        type: r.display_name.split(",").slice(1, 3).join(",").trim(),
+        lat: +r.lat,
+        lng: +r.lon,
+        zoom: 14,
+        color: "#FF3B30",
+        query: r.display_name
+      }));
+      setResults(found);
+      setStatus(found.length ? "" : "none");
+      if (found[0]) setActive(found[0]);
+    } catch {
+      setStatus("none");
+    }
+  };
+
+  const zoom = (d: number) => setActive((p) => ({ ...p, zoom: Math.min(18, Math.max(3, p.zoom + d)) }));
+
+  const Row = ({ place }: { place: Place }) => {
+    const selected = active.id === place.id;
+    return (
+      <button
+        onClick={() => setActive(place)}
         style={{
-          width: "100%",
-          height: "100%",
-          background:
-            mapStyle === "satellite"
-              ? "linear-gradient(145deg, #1a2a1a, #0a1f0a, #152515)"
-              : mapStyle === "transit"
-              ? "linear-gradient(145deg, #e8f0fe, #d2e3fc, #c2d7f8)"
-              : "linear-gradient(145deg, #e8e8e0, #d4d4c8, #c8c8b8)",
-          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 10px",
+          margin: "1px 6px",
+          width: "calc(100% - 12px)",
+          borderRadius: 8,
+          background: selected ? "rgba(0,122,255,0.12)" : "transparent",
+          textAlign: "left"
         }}
       >
-        {/* Roads */}
-        <svg
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-          viewBox="0 0 400 300"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          {/* Main roads */}
-          <line x1="0" y1="150" x2="400" y2="150" stroke={mapStyle === "satellite" ? "rgba(255,255,255,0.3)" : "white"} strokeWidth="6" />
-          <line x1="200" y1="0" x2="200" y2="300" stroke={mapStyle === "satellite" ? "rgba(255,255,255,0.3)" : "white"} strokeWidth="6" />
-          <line x1="0" y1="80" x2="400" y2="220" stroke={mapStyle === "satellite" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)"} strokeWidth="3" />
-          <line x1="0" y1="220" x2="400" y2="80" stroke={mapStyle === "satellite" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)"} strokeWidth="3" />
-          {/* Blocks */}
-          {[60, 130, 270, 340].map((x) =>
-            [50, 110, 190, 250].map((y) => (
-              <rect
-                key={`${x}-${y}`}
-                x={x}
-                y={y}
-                width={50}
-                height={40}
-                rx={4}
-                fill={
-                  mapStyle === "satellite"
-                    ? "rgba(60,80,60,0.6)"
-                    : mapStyle === "transit"
-                    ? "rgba(200,215,240,0.8)"
-                    : "rgba(210,205,185,0.9)"
-                }
-              />
-            ))
-          )}
-          {/* Water */}
-          <ellipse cx="320" cy="230" rx="60" ry="40" fill={mapStyle === "satellite" ? "rgba(20,60,100,0.7)" : "rgba(140,190,230,0.7)"} />
-
-          {/* Place pins */}
-          {PLACES.map((place, i) => {
-            const x = 80 + i * 80;
-            const y = 60 + (i % 2) * 80;
-            const isActive = activePlace.id === place.id;
-            return (
-              <g key={place.id} onClick={() => setActivePlace(place)} style={{ cursor: "pointer" }}>
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={isActive ? 14 : 10}
-                  fill={place.color}
-                  opacity={isActive ? 1 : 0.8}
-                />
-                <circle cx={x} cy={y} r={isActive ? 7 : 5} fill="white" />
-                {isActive && (
-                  <circle cx={x} cy={y} r={22} fill="none" stroke={place.color} strokeWidth="2" opacity="0.4" />
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Map style switcher */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            display: "flex",
-            gap: "4px",
-            background: "rgba(255,255,255,0.9)",
-            borderRadius: "10px",
-            padding: "3px",
-            backdropFilter: "blur(10px)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-          }}
-        >
-          {(["standard", "satellite", "transit"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setMapStyle(s)}
-              style={{
-                background: mapStyle === s ? "#007AFF" : "transparent",
-                border: "none",
-                borderRadius: "7px",
-                padding: "4px 8px",
-                fontSize: "10px",
-                cursor: "pointer",
-                color: mapStyle === s ? "white" : "#1c1c1e",
-                fontWeight: mapStyle === s ? 600 : 400,
-                textTransform: "capitalize",
-                transition: "all 0.15s ease",
-              }}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="flex-center" style={{ width: 28, height: 28, borderRadius: "50%", background: place.color, flexShrink: 0 }}>
+          <span className="i-ph:map-pin-fill" style={{ width: 14, height: 14, color: "white" }} />
         </div>
-
-        {/* Zoom controls */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 80,
-            right: 12,
-            display: "flex",
-            flexDirection: "column",
-            background: "rgba(255,255,255,0.9)",
-            borderRadius: "10px",
-            overflow: "hidden",
-            backdropFilter: "blur(10px)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-          }}
-        >
-          {["+", "−"].map((btn) => (
-            <button
-              key={btn}
-              style={{
-                background: "transparent",
-                border: "none",
-                width: 32,
-                height: 32,
-                cursor: "pointer",
-                fontSize: "18px",
-                color: "#1c1c1e",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottom: btn === "+" ? "0.5px solid rgba(0,0,0,0.1)" : "none",
-              }}
-            >
-              {btn}
-            </button>
-          ))}
+        <div style={{ minWidth: 0 }}>
+          <div className="truncate" style={{ fontSize: 13, fontWeight: selected ? 600 : 400, color: selected ? "#007AFF" : "var(--a-text)" }}>
+            {place.name}
+          </div>
+          <div className="truncate" style={{ fontSize: 11, color: "var(--a-text-2)" }}>
+            {place.type}
+          </div>
         </div>
+      </button>
+    );
+  };
 
-        {/* Active place card */}
-        <motion.div
-          key={activePlace.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            position: "absolute",
-            bottom: 12,
-            left: 12,
-            right: 52,
-            background: "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(20px)",
-            borderRadius: "14px",
-            padding: "12px 14px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: activePlace.color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <span className="i-ph:map-pin" style={{ width: "18px", height: "18px", color: "white" }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "#1c1c1e" }}>
-              {activePlace.name}
-            </div>
-            <div style={{ fontSize: "11px", color: "rgba(0,0,0,0.5)" }}>
-              {activePlace.type}
-            </div>
-          </div>
-          <button
-            style={{
-              background: "#007AFF",
-              border: "none",
-              borderRadius: "8px",
-              padding: "6px 12px",
-              fontSize: "12px",
-              color: "white",
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            Directions
-          </button>
-        </motion.div>
-      </div>
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--a-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", padding: "8px 14px 4px" }}>
+      {children}
     </div>
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100%",
-        
-        background: "#e8e8e0",
-        borderRadius: "0 0 14px 14px",
-        overflow: "hidden",
-      }}
-    >
+    <div className="app-theme" style={{ display: "flex", height: "100%", background: "var(--a-bg)", overflow: "hidden" }}>
       {/* Sidebar */}
       <div
         style={{
-          width: "220px",
+          width: 230,
           flexShrink: 0,
-          background: "rgba(248,248,250,0.98)",
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
+          background: "var(--a-bg-side)",
+          borderRight: "0.5px solid var(--a-border)",
           display: "flex",
           flexDirection: "column",
+          overflowY: "auto"
         }}
       >
-        {/* Search */}
-        <div style={{ padding: "10px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "rgba(0,0,0,0.07)",
-              borderRadius: "10px",
-              padding: "7px 10px",
-            }}
-          >
-            <span className="i-ph:magnifying-glass" style={{ width: "12px", height: "12px", opacity: 0.5 }} />
+        <form
+          style={{ padding: 10 }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            geocode();
+          }}
+        >
+          <div className="flex items-center" style={{ gap: 6, background: "var(--a-fill)", borderRadius: 10, padding: "7px 10px" }}>
+            <span className="i-ph:magnifying-glass" style={{ width: 12, height: 12, color: "var(--a-text-2)" }} />
             <input
               placeholder="Search Maps"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                background: "none",
-                border: "none",
-                outline: "none",
-                fontSize: "13px",
-                width: "100%",
-                color: "#1c1c1e",
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setStatus("");
               }}
+              style={{ background: "none", border: "none", outline: "none", fontSize: 13, width: "100%", color: "var(--a-text)" }}
             />
           </div>
-        </div>
+          {search.trim() && (
+            <div style={{ fontSize: 11, color: "var(--a-text-2)", padding: "6px 4px 0" }}>
+              {status === "searching" ? "Searching…" : status === "none" ? "No places found." : "Press Enter to search the world"}
+            </div>
+          )}
+        </form>
 
-        {/* Favourites */}
-        <div
-          style={{
-            fontSize: "10px",
-            fontWeight: 700,
-            color: "rgba(0,0,0,0.35)",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            padding: "4px 14px 4px",
-          }}
-        >
-          Favourites
-        </div>
-        {filtered.map((place) => (
-          <button
-            key={place.id}
-            onClick={() => setActivePlace(place)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "8px 12px",
-              background: activePlace.id === place.id ? "rgba(0,122,255,0.1)" : "transparent",
-              border: "none",
-              cursor: "pointer",
-              borderRadius: "8px",
-              margin: "1px 6px",
-              width: "calc(100% - 12px)",
-              transition: "background 0.15s ease",
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: place.color,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <span className="i-ph:map-pin" style={{ width: "14px", height: "14px", color: "white" }} />
-            </div>
-            <div style={{ textAlign: "left", minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: "13px",
-                  color: activePlace.id === place.id ? "#007AFF" : "#1c1c1e",
-                  fontWeight: activePlace.id === place.id ? 600 : 400,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {place.name}
-              </div>
-              <div style={{ fontSize: "11px", color: "rgba(0,0,0,0.4)" }}>{place.type}</div>
-            </div>
-          </button>
+        {results.length > 0 && (
+          <>
+            <SectionLabel>Results</SectionLabel>
+            {results.map((p) => (
+              <Row key={p.id} place={p} />
+            ))}
+          </>
+        )}
+        <SectionLabel>Favourites</SectionLabel>
+        {shown.map((p) => (
+          <Row key={p.id} place={p} />
         ))}
       </div>
 
       {/* Map */}
-      <div style={{ flex: 1, position: "relative" }}>
-        <MapView />
+      <div style={{ flex: 1, position: "relative", background: "#e8e8e0" }}>
+        <iframe
+          key={`${active.id}-${active.zoom}`}
+          title={`Map of ${active.name}`}
+          src={embedUrl(active)}
+          style={{ width: "100%", height: "100%", border: 0 }}
+          loading="lazy"
+        />
+
+        <div style={{ position: "absolute", right: 12, top: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+          {(
+            [
+              ["i-ph:plus-bold", 1],
+              ["i-ph:minus-bold", -1]
+            ] as const
+          ).map(([icon, d]) => (
+            <button
+              key={icon}
+              onClick={() => zoom(d)}
+              className="flex-center"
+              style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.92)", boxShadow: "0 2px 8px rgba(0,0,0,0.18)", color: "#1c1c1e" }}
+            >
+              <span className={icon} style={{ width: 13, height: 13 }} />
+            </button>
+          ))}
+        </div>
+
+        <motion.div
+          key={active.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            position: "absolute",
+            left: 12,
+            right: 12,
+            bottom: 14,
+            maxWidth: 420,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 14px",
+            borderRadius: 14,
+            background: "var(--a-bg)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
+          }}
+        >
+          <div className="flex-center" style={{ width: 36, height: 36, borderRadius: "50%", background: active.color, flexShrink: 0 }}>
+            <span className="i-ph:map-pin-fill" style={{ width: 18, height: 18, color: "white" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="truncate" style={{ fontSize: 14, fontWeight: 600, color: "var(--a-text)" }}>
+              {active.name}
+            </div>
+            <div className="truncate" style={{ fontSize: 11, color: "var(--a-text-2)" }}>
+              {active.type}
+            </div>
+          </div>
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(active.query)}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ background: "#007AFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "white", flexShrink: 0 }}
+          >
+            Directions
+          </a>
+        </motion.div>
       </div>
     </div>
   );

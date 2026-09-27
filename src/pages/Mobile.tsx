@@ -3,7 +3,7 @@ import { wallpaperSrc } from "~/utils";
 import React, { Suspense, useState, useRef } from "react";
 import AppLoading from "~/components/AppLoading";
 import { apps } from "~/configs";
-import { useStore } from "~/stores";
+import { useStore, useWallpaper } from "~/stores";
 import type { MacActions } from "~/types";
 import { AnimatePresence, motion } from "framer-motion";
 import StatusBar from "~/components/mobile/StatusBar";
@@ -22,10 +22,9 @@ export default function Mobile(props: MacActions) {
 
   const { audioState, controls } = useAudioContext();
 
-  const { dark, brightness, getWallpaper, volume } = useStore(useShallow((s) => ({
+  const { dark, brightness, volume } = useStore(useShallow((s) => ({
     dark: s.dark,
     brightness: s.brightness,
-    getWallpaper: s.getWallpaper,
     volume: s.volume,
   })));
 
@@ -43,7 +42,7 @@ export default function Mobile(props: MacActions) {
     setBrightness(value);
   };
 
-  const activeWallpaper = getWallpaper();
+  const activeWallpaper = useWallpaper();
 
   const openApp = (id: string) => {
     setActiveApp(id);

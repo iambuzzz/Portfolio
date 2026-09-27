@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { profile } from "~/data/profile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowSize } from "~/hooks/useWindowSize";
 
@@ -12,64 +13,77 @@ interface Note {
   color?: string;
 }
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
+// Starter notes are generated from the profile; visitors' edits and new notes
+// are kept in their own browser (localStorage).
 const INITIAL_NOTES: Note[] = [
   {
-    id: "1",
-    title: "macOS Tahoe",
-    body: "The Chevrolet Tahoe is a line of full-size SUVs from Chevrolet marketed since the 1995 model year.",
-    date: "Thursday",
-    dateISO: "2025-09-11",
+    id: "welcome",
+    title: "👋 Start here",
+    body: `Hi, I'm ${profile.firstName}! This whole site is my portfolio, built as a Mac.
+
+Things to try:
+• Open Terminal and type "help", "whoami" or "open devtinder"
+• Ask Siri about me (menu bar or dock)
+• Press ⌘/Ctrl + Space for Spotlight
+• Right-click the desktop › Edit Widgets
+• Play any song in Spotify
+• Find my résumé and certificates in Finder
+
+Feel free to write your own notes here — they stay in your browser.`,
+    date: "Today",
+    dateISO: TODAY,
     pinned: true,
     color: "#FFCC00",
   },
   {
-    id: "2",
-    title: "macOS Sequoia",
-    body: "The Toyota Sequoia is a full-size SUV manufactured by Toyota.",
-    date: "10/24/24",
-    dateISO: "2024-10-24",
-  },
-  {
-    id: "3",
-    title: "macOS Sonoma",
-    body: "Sonoma is a city in Sonoma County, California.",
-    date: "9/14/23",
-    dateISO: "2023-09-14",
-  },
-  {
-    id: "4",
-    title: "macOS Ventura",
-    body: "According to Wikipedia, Ventura is officially named San Buenaventura.",
-    date: "10/21/22",
-    dateISO: "2022-10-21",
-  },
-  {
-    id: "5",
-    title: "It's macOS Monterey time!",
-    body: "No, seriously. I'm taking a look at the new features.",
-    date: "10/21/21",
-    dateISO: "2021-10-21",
-    pinned: false,
+    id: "skills",
+    title: "Skills",
+    body: Object.entries(profile.skills).map(([k, v]) => `${k}\n${v.join(", ")}`).join("\n\n"),
+    date: "Today",
+    dateISO: TODAY,
     color: "#007AFF",
   },
   {
-    id: "6",
-    title: "Project Ideas",
-    body: "1. Portfolio macOS 26 upgrade\n2. Terminal redesign\n3. Finder column view",
-    date: "Yesterday",
-    dateISO: "2025-09-10",
+    id: "education",
+    title: "Education",
+    body: profile.education.map((e) => `${e.school}\n${e.degree}${e.period ? ` (${e.period})` : ""}\n${e.score}`).join("\n\n"),
+    date: "Today",
+    dateISO: TODAY,
+  },
+  {
+    id: "achievements",
+    title: "Achievements",
+    body: profile.achievements.map((a) => `• ${a}`).join("\n"),
+    date: "Today",
+    dateISO: TODAY,
     color: "#34C759",
   },
   {
-    id: "7",
-    title: "Reading List",
-    body: "- Clean Code — Robert Martin\n- The Pragmatic Programmer",
-    date: "Yesterday",
-    dateISO: "2025-09-10",
+    id: "interests",
+    title: "Interests",
+    body: profile.interests.map((i) => `${i.title}: ${i.text}`).join("\n"),
+    date: "Today",
+    dateISO: TODAY,
   },
 ];
 
-const DATE_BUCKET_ORDER = ["Previous 7 Days", "2025", "2024", "2023", "2022", "2021", "Older"];
+const STORAGE_KEY = "macos-notes-v1";
+const loadNotes = (): Note[] => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  } catch {
+    // storage unavailable or corrupted: fall back to the starter notes
+  }
+  return INITIAL_NOTES;
+};
+
+const DATE_BUCKET_ORDER = ["Previous 7 Days", ...Array.from({ length: 6 }, (_, i) => String(new Date().getFullYear() - i)), "Older"];
 
 function dateBucket(note: Note): string {
   const iso = note.dateISO;
@@ -98,8 +112,16 @@ function groupNotes(notes: Note[]): { bucket: string; notes: Note[] }[] {
 }
 
 export default function Notes() {
-  const [notes, setNotes] = useState<Note[]>(INITIAL_NOTES);
-  const [selected, setSelected] = useState<string>(INITIAL_NOTES[0].id);
+  const [notes, setNotes] = useState<Note[]>(loadNotes);
+  const [selected, setSelected] = useState<string>(() => notes[0]?.id ?? "");
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    } catch {
+      // ignore: notes just won't persist
+    }
+  }, [notes]);
   const [search, setSearch] = useState("");
   const [activeSection, setActiveSection] = useState<"notes" | "shared">("notes");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -162,7 +184,7 @@ export default function Notes() {
       }}
       onMouseEnter={(e) => {
         if (selected !== note.id)
-          (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.04)";
+          (e.currentTarget as HTMLElement).style.background = "var(--a-fill)";
       }}
       onMouseLeave={(e) => {
         if (selected !== note.id)
@@ -177,7 +199,7 @@ export default function Notes() {
           style={{
             fontSize: "13px",
             fontWeight: 600,
-            color: "#1c1c1e",
+            color: "var(--a-text)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -186,11 +208,11 @@ export default function Notes() {
           {note.title || "Untitled"}
         </div>
         <div style={{ display: "flex", gap: "6px", marginTop: "1px" }}>
-          <span style={{ fontSize: "11px", color: "rgba(0,0,0,0.4)", flexShrink: 0 }}>{note.date}</span>
+          <span style={{ fontSize: "11px", color: "var(--a-text-2)", flexShrink: 0 }}>{note.date}</span>
           <span
             style={{
               fontSize: "11px",
-              color: "rgba(0,0,0,0.35)",
+              color: "var(--a-text-3)",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -208,7 +230,7 @@ export default function Notes() {
       style={{
         fontSize: "12px",
         fontWeight: 700,
-        color: "rgba(0,0,0,0.4)",
+        color: "var(--a-text-2)",
         padding: "8px 14px 3px",
         letterSpacing: "0.01em",
       }}
@@ -229,12 +251,12 @@ export default function Notes() {
   ];
 
   return (
-    <div
+    <div className="app-theme"
       style={{
         display: "flex",
         height: "100%",
         
-        background: "rgba(250,250,248,0.99)",
+        background: "var(--a-bg)",
         borderRadius: "0 0 14px 14px",
         overflow: "hidden",
       }}
@@ -245,8 +267,8 @@ export default function Notes() {
         style={{
           width: isMobile ? "100%" : "180px",
           flexShrink: 0,
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
-          background: "rgba(244,242,236,0.99)",
+          borderRight: "0.5px solid var(--a-border)",
+          background: "var(--a-bg-side)",
           display: "flex",
           flexDirection: "column",
           paddingTop: "8px",
@@ -256,13 +278,13 @@ export default function Notes() {
         <div
           style={{
             padding: "6px 12px 8px",
-            borderBottom: "0.5px solid rgba(0,0,0,0.07)",
+            borderBottom: "0.5px solid var(--a-border)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
           }}
         >
-          <span style={{ fontSize: "13px", fontWeight: 600, color: "#1c1c1e" }}>Notes</span>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--a-text)" }}>Notes</span>
           <button
             onClick={newNote}
             title="New Note"
@@ -281,7 +303,7 @@ export default function Notes() {
 
         {/* iCloud section */}
         <div style={{ padding: "10px 0 4px" }}>
-          <div style={{ fontSize: "10px", fontWeight: 700, color: "rgba(0,0,0,0.35)", textTransform: "uppercase", letterSpacing: "0.5px", padding: "0 12px 4px" }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--a-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", padding: "0 12px 4px" }}>
             iCloud
           </div>
           <button
@@ -301,11 +323,11 @@ export default function Notes() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <img src="/img/icons/sf-icons/folder.svg" alt="Folder" style={{ width: "13px", height: "13px", opacity: 0.8 }} className="dark:invert" />
-              <span style={{ fontSize: "12px", fontWeight: activeSection === "notes" ? 600 : 400, color: activeSection === "notes" ? "#007AFF" : "#1c1c1e" }}>
+              <span style={{ fontSize: "12px", fontWeight: activeSection === "notes" ? 600 : 400, color: activeSection === "notes" ? "#007AFF" : "var(--a-text)" }}>
                 Notes
               </span>
             </div>
-            <span style={{ fontSize: "11px", color: "rgba(0,0,0,0.35)", background: "rgba(0,0,0,0.07)", borderRadius: "8px", padding: "1px 6px" }}>
+            <span style={{ fontSize: "11px", color: "var(--a-text-3)", background: "var(--a-fill)", borderRadius: "8px", padding: "1px 6px" }}>
               {notes.length}
             </span>
           </button>
@@ -326,15 +348,15 @@ export default function Notes() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <img src="/img/icons/sf-icons/folder-user.svg" alt="Shared Folder" style={{ width: "13px", height: "13px", opacity: 0.6 }} className="dark:invert" />
-              <span style={{ fontSize: "12px", color: "#1c1c1e" }}>Shared</span>
+              <span style={{ fontSize: "12px", color: "var(--a-text)" }}>Shared</span>
             </div>
-            <span style={{ fontSize: "11px", color: "rgba(0,0,0,0.35)", background: "rgba(0,0,0,0.07)", borderRadius: "8px", padding: "1px 6px" }}>1</span>
+            <span style={{ fontSize: "11px", color: "var(--a-text-3)", background: "var(--a-fill)", borderRadius: "8px", padding: "1px 6px" }}>1</span>
           </button>
         </div>
 
         {/* Tags */}
-        <div style={{ padding: "8px 12px 4px", borderTop: "0.5px solid rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize: "10px", fontWeight: 700, color: "rgba(0,0,0,0.35)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>
+        <div style={{ padding: "8px 12px 4px", borderTop: "0.5px solid var(--a-border)" }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--a-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>
             Tags
           </div>
           <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
@@ -342,11 +364,11 @@ export default function Notes() {
               <span
                 key={tag}
                 style={{
-                  background: "rgba(0,0,0,0.07)",
+                  background: "var(--a-fill)",
                   borderRadius: "12px",
                   padding: "3px 9px",
                   fontSize: "11px",
-                  color: "#1c1c1e",
+                  color: "var(--a-text)",
                   cursor: "default",
                   userSelect: "none",
                 }}
@@ -365,8 +387,8 @@ export default function Notes() {
         style={{
           width: isMobile ? "100%" : "220px",
           flexShrink: 0,
-          borderRight: "0.5px solid rgba(0,0,0,0.1)",
-          background: "rgba(248,246,240,0.99)",
+          borderRight: "0.5px solid var(--a-border)",
+          background: "var(--a-bg-list)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -375,7 +397,7 @@ export default function Notes() {
         <div
           style={{
             padding: "8px 10px",
-            borderBottom: "0.5px solid rgba(0,0,0,0.08)",
+            borderBottom: "0.5px solid var(--a-border)",
             display: "flex",
             gap: "6px",
             alignItems: "center",
@@ -387,7 +409,7 @@ export default function Notes() {
               display: "flex",
               alignItems: "center",
               gap: "5px",
-              background: "rgba(0,0,0,0.07)",
+              background: "var(--a-fill)",
               borderRadius: "7px",
               padding: "4px 8px",
             }}
@@ -397,7 +419,7 @@ export default function Notes() {
               placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ background: "none", border: "none", outline: "none", fontSize: "12px", width: "100%", color: "#1c1c1e" }}
+              style={{ background: "none", border: "none", outline: "none", fontSize: "12px", width: "100%", color: "var(--a-text)" }}
             />
           </div>
           <button
@@ -454,11 +476,11 @@ export default function Notes() {
           <div
             style={{
               padding: "6px 12px",
-              borderBottom: "0.5px solid rgba(0,0,0,0.08)",
+              borderBottom: "0.5px solid var(--a-border)",
               display: "flex",
               alignItems: "center",
               gap: "2px",
-              background: "rgba(250,250,248,0.99)",
+              background: "var(--a-bg)",
             }}
           >
             {toolbarIcons.map((t) => (
@@ -480,7 +502,7 @@ export default function Notes() {
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.opacity = "1";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.06)";
+                  (e.currentTarget as HTMLElement).style.background = "var(--a-fill)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.opacity = "0.55";
@@ -509,7 +531,7 @@ export default function Notes() {
           </div>
 
           {/* Date */}
-          <div style={{ fontSize: "11px", color: "rgba(0,0,0,0.4)", padding: "10px 20px 0", textAlign: "center" }}>
+          <div style={{ fontSize: "11px", color: "var(--a-text-2)", padding: "10px 20px 0", textAlign: "center" }}>
             {activeNote.dateISO ?? activeNote.date}
           </div>
 
@@ -523,7 +545,7 @@ export default function Notes() {
               outline: "none",
               fontSize: "20px",
               fontWeight: 700,
-              color: "#1c1c1e",
+              color: "var(--a-text)",
               padding: "8px 20px 4px",
               background: "transparent",
             }}
@@ -541,7 +563,7 @@ export default function Notes() {
               resize: "none",
               fontSize: "14px",
               lineHeight: "1.6",
-              color: "#1c1c1e",
+              color: "var(--a-text)",
               padding: "0 20px 20px",
               background: "transparent",
               
@@ -549,7 +571,7 @@ export default function Notes() {
           />
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.3)", fontSize: "14px" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--a-text-3)", fontSize: "14px" }}>
           Select or create a note
         </div>
       )}

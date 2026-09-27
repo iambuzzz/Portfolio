@@ -2,7 +2,7 @@ import { useShallow } from "zustand/react/shallow";
 import { motion, AnimatePresence } from "framer-motion";
 import { wallpaperThumb } from "~/utils";
 import { useState } from "react";
-import { useStore } from "~/stores";
+import { useStore, useWallpaper } from "~/stores";
 import { useWindowSize } from "~/hooks";
 import { profile } from "~/data/profile";
 
@@ -268,8 +268,7 @@ const AppearancePanel = () => {
     appearanceMode, setAppearanceMode,
     iconStyle, setIconStyle,
     tintWindows, setTintWindows,
-    getWallpaper,
-  } = useStore(useShallow((s) => ({
+    } = useStore(useShallow((s) => ({
     accentColor: s.accentColor,
     setAccentColor: s.setAccentColor,
     appearanceMode: s.appearanceMode,
@@ -278,10 +277,9 @@ const AppearancePanel = () => {
     setIconStyle: s.setIconStyle,
     tintWindows: s.tintWindows,
     setTintWindows: s.setTintWindows,
-    getWallpaper: s.getWallpaper,
   })));
 
-  const wallpaper = getWallpaper();
+  const wallpaper = useWallpaper();
   const colors = [
     { label: "Blue", value: "#007AFF" },
     { label: "Purple", value: "#AF52DE" },
@@ -775,10 +773,8 @@ const DisplaysPanel = () => {
   const [resolution, setResolution] = useState("Default (2880 x 1800)");
   const [refreshRate, setRefreshRate] = useState("120Hz");
   const [trueTone, setTrueTone] = useState(true);
-
-  const getWallpaper = useStore((s) => s.getWallpaper);
   const dark = useStore((s) => s.dark);
-  const wallpaper = getWallpaper();
+  const wallpaper = useWallpaper();
   const bgUrl = wallpaperThumb(dark ? wallpaper.night : wallpaper.day);
 
   return (
