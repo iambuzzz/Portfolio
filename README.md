@@ -15,7 +15,6 @@ Open apps, explore projects in Safari, browse source code in VS Code, play music
 ![UnoCSS](https://img.shields.io/badge/UnoCSS-333333?style=flat&logo=unocss&logoColor=white)
 ![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat&logo=framer&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 </div>
 
@@ -32,13 +31,9 @@ Open apps, explore projects in Safari, browse source code in VS Code, play music
 - [Highlights](#highlights)
 - [Apps](#apps)
 - [Tech stack](#tech-stack)
-- [Getting started](#getting-started)
-- [Environment variables](#environment-variables)
 - [Project structure](#project-structure)
 - [Serverless API](#serverless-api)
-- [Editing the content](#editing-the-content)
-- [Deployment](#deployment)
-- [License](#license)
+- [Usage](#usage)
 - [Contact](#contact)
 
 ## Highlights
@@ -83,7 +78,7 @@ Open apps, explore projects in Safari, browse source code in VS Code, play music
 | **Photos** | Project screenshots and certificates in albums |
 | **Bear** | Markdown notes on my profile, education, skills, certifications and every project |
 | **Spotify** | Search and stream music |
-| **Maps** | Where I'm based, with place search (OpenStreetMap fallback without a key) |
+| **Maps** | Where I'm based, with place search and an OpenStreetMap fallback |
 | **FaceTime** | Live camera with photo capture |
 | **Notes · Clock · System Settings** | The everyday essentials, all functional |
 
@@ -100,45 +95,6 @@ Open apps, explore projects in Safari, browse source code in VS Code, play music
 | Services | Groq (LLM + Whisper), Web3Forms, Google Maps Embed API, GitHub REST API, JioSaavn |
 | Hosting | Vercel |
 
-## Getting started
-
-**Prerequisites:** Node.js 18+ and npm.
-
-```bash
-git clone https://github.com/iambuzzz/Portfolio.git
-cd Portfolio
-npm install
-cp .env.example .env   # then fill in the keys (see below)
-npm run dev
-```
-
-The dev server runs at `http://localhost:5173`. It also serves the `api/` routes locally, so Siri, music and the GitHub widget work without the Vercel CLI.
-
-| Script | Description |
-|---|---|
-| `npm run dev` | Start the dev server (also reachable from your phone on the same Wi-Fi) |
-| `npm run build` | Type-check and create a production build in `dist/` |
-| `npm run serve` | Preview the production build locally, with the API routes |
-| `npm run typecheck` | Run the TypeScript compiler only |
-| `npm run lint` | Lint with ESLint |
-| `npm run optimize` | Re-encode images added to `public/` |
-
-> Microphone and camera access need a secure context. They work on `localhost` and on the deployed HTTPS site, but not when opening the dev server by LAN IP on a phone.
-
-## Environment variables
-
-Copy `.env.example` to `.env`. On Vercel, add the same variables under **Project → Settings → Environment Variables**.
-
-| Variable | Required | Used by | Notes |
-|---|---|---|---|
-| `GROQ_API_KEY` | For Siri and Messages | `api/siri`, `api/messages` | Server-side only; never sent to the browser |
-| `VITE_WEB3FORMS_KEY` | For the Mail form | Mail app | Public by design: it can only send mail to the owner |
-| `VITE_GOOGLE_MAPS_KEY` | For Maps | Maps app | Restrict it to your domains and the Maps Embed API |
-| `VITE_SITE_URL` | Recommended | `index.html` | Absolute URL for Open Graph / canonical tags, e.g. `https://iambuzzdev.in` |
-| `GITHUB_TOKEN` | Optional | `api/github` | Raises GitHub's rate limit for the widget; needs no scopes |
-
-Everything degrades gracefully: without a key, the related feature shows a friendly message instead of breaking.
-
 ## Project structure
 
 ```
@@ -152,7 +108,7 @@ Everything degrades gracefully: without a key, the related feature shows a frien
 ├── public/                 # wallpapers, icons, project screenshots, résumé
 ├── scripts/                # asset optimisation, OG image generation
 └── src/
-    ├── data/profile.ts     # ← all personal content lives here
+    ├── data/               # profile, Siri and Messages content
     ├── pages/              # Boot, Login, Desktop (laptop) and Mobile (phone) shells
     ├── components/
     │   ├── apps/           # one file per app
@@ -167,7 +123,7 @@ Everything degrades gracefully: without a key, the related feature shows a frien
 
 ## Serverless API
 
-All routes live in `api/` and run as Vercel functions. `vite.config.ts` mounts the same handlers in `npm run dev` and `npm run serve`, so local and production behave identically.
+All routes live in `api/` and run as Vercel functions. Vite mounts the same handlers locally, so development and production behave identically.
 
 | Route | Purpose | Protection |
 |---|---|---|
@@ -178,27 +134,11 @@ All routes live in `api/` and run as Vercel functions. `vite.config.ts` mounts t
 | `GET /api/github` | Profile stats and recently pushed repos | Same-origin + rate limit, CDN-cached (1 h) |
 | `GET /api/frame-check` | Checks a URL's framing headers before Safari loads it | Same-origin + rate limit |
 
-## Editing the content
+## Usage
 
-Everything personal lives in **[`src/data/profile.ts`](src/data/profile.ts)**: bio, education, projects, skills, achievements, certifications and links. Every app, Siri and the Terminal read from this one file.
+This is my personal portfolio. The code is public so you can see how it's built. Please don't copy it or redeploy it as your own portfolio.
 
-- **Projects:** add an entry to `projects`, and put screenshots in `public/projects/<id>/`.
-- **Profile photo:** `public/img/Profile/avatar.jpg`, or change `avatar` in `profile.ts`.
-- **Résumé:** replace `public/resume.pdf`.
-
-## Deployment
-
-The project is configured for **Vercel** (`vercel.json`): it installs with `npm ci`, builds with `npm run build` and serves `dist/`.
-
-1. Import the repository into Vercel. Vite is detected automatically.
-2. Add the [environment variables](#environment-variables).
-3. Deploy, then add your custom domain under **Settings → Domains**.
-
-`vercel.json` also sets security headers and long-term caching for hashed assets.
-
-## License
-
-Released under the [MIT License](LICENSE.md). macOS, iOS and the app names and icons shown are trademarks of their respective owners; this project is a personal portfolio and is not affiliated with Apple or any other company.
+macOS, iOS and the app names and icons shown are trademarks of their respective owners. This project is not affiliated with Apple or any other company.
 
 ## Contact
 
