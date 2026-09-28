@@ -106,3 +106,9 @@ declare global {
   const useWidgetStore: typeof import('./stores/widgets')['useWidgetStore']
   const useWindowSize: typeof import('./hooks/useWindowSize')['useWindowSize']
 }
+// for type re-export
+declare global {
+  // @ts-ignore
+  export type { AppErrorBoundary } from './components/AppErrorBoundary'
+  import('./components/AppErrorBoundary')
+}

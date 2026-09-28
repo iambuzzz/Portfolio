@@ -7,10 +7,10 @@ Built with React, TypeScript, Zustand, UnoCSS, Framer Motion and Vite. Deployed 
 ## Development
 
 ```bash
-pnpm install
-pnpm dev        # dev server (also serves api/ locally)
-pnpm build      # typecheck + production build → dist/
-pnpm optimize   # re-encode images added to public/
+npm install
+npm run dev       # dev server (also serves api/ locally)
+npm run build     # typecheck + production build → dist/
+npm run optimize  # re-encode images added to public/
 ```
 
 Siri needs a Groq API key. Copy `.env.example` to `.env` and set `GROQ_API_KEY` (server-side only — it is never sent to the browser). On Vercel, set the same variable under Project → Settings → Environment Variables.

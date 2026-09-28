@@ -65,7 +65,7 @@ export default defineConfig({
     presetAttributify(),
     presetIcons({
       warn: true,
-      // Explicit loaders: pnpm's strict layout hides icon sets from auto-discovery.
+      // Explicit loaders so icon sets resolve regardless of how node_modules is laid out.
       collections: {
         ph: () => import("@iconify-json/ph/icons.json").then((i) => i.default as any),
         "fa6-brands": () =>
