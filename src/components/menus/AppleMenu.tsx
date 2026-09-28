@@ -2,11 +2,13 @@ import React, { useRef, useState } from "react";
 import { useClickOutside } from "~/hooks";
 import { profile } from "~/data/profile";
 
+// Lock, Sleep, Log Out, Restart and Force Quit are handled by the desktop
+// shell (index.tsx / Desktop.tsx) through this event.
+export type SystemCommand = "lock" | "sleep" | "logout" | "restart" | "forcequit";
+export const systemCommand = (cmd: SystemCommand) => window.dispatchEvent(new CustomEvent("system:command", { detail: cmd }));
+
 interface AppleMenuProps {
-  logout: () => void;
   shut: (e: React.MouseEvent<HTMLLIElement>) => void;
-  restart: (e: React.MouseEvent<HTMLLIElement>) => void;
-  sleep: (e: React.MouseEvent<HTMLLIElement>) => void;
   toggleAppleMenu: () => void;
   openApp?: (id: string) => void;
   openAboutMac?: () => void;
@@ -14,10 +16,7 @@ interface AppleMenuProps {
 }
 
 export default function AppleMenu({
-  logout,
   shut,
-  restart,
-  sleep,
   toggleAppleMenu,
   openApp,
   openAboutMac,
@@ -27,13 +26,9 @@ export default function AppleMenu({
 
   useClickOutside(ref, toggleAppleMenu, [btnRef]);
 
-  const handleSleep = () => {
-    sleep({ stopPropagation: () => {} } as React.MouseEvent<HTMLLIElement>);
+  const command = (cmd: SystemCommand) => () => {
     toggleAppleMenu();
-  };
-  const handleRestart = () => {
-    restart({ stopPropagation: () => {} } as React.MouseEvent<HTMLLIElement>);
-    toggleAppleMenu();
+    systemCommand(cmd);
   };
   const handleShut = () => {
     shut({ stopPropagation: () => {} } as React.MouseEvent<HTMLLIElement>);
@@ -106,18 +101,15 @@ export default function AppleMenu({
       <MenuItem onClick={handleAbout}>About This Mac</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
       <MenuItem onClick={() => open("system-settings")}>System Settings...</MenuItem>
-      <MenuItem onClick={() => open("app-store")}>App Store...</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
-      <MenuItem>Recent Items ›</MenuItem>
+      <MenuItem onClick={command("forcequit")}>Force Quit...</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
-      <MenuItem hint="⌥⌘⎋">Force Quit...</MenuItem>
-      <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
-      <MenuItem onClick={handleSleep}>Sleep</MenuItem>
-      <MenuItem onClick={handleRestart}>Restart...</MenuItem>
+      <MenuItem onClick={command("sleep")}>Sleep</MenuItem>
+      <MenuItem onClick={command("restart")}>Restart...</MenuItem>
       <MenuItem onClick={handleShut}>Shut Down...</MenuItem>
       <div className="h-px bg-gray-300 dark:bg-white/10 my-1 mx-2" />
-      <MenuItem onClick={logout} hint="⌃⌘Q">Lock Screen</MenuItem>
-      <MenuItem onClick={logout} hint="⇧⌘Q">Log Out {profile.firstName}...</MenuItem>
+      <MenuItem onClick={command("lock")}>Lock Screen</MenuItem>
+      <MenuItem onClick={command("logout")}>Log Out {profile.firstName}...</MenuItem>
     </div>
   );
 }

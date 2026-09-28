@@ -13,6 +13,10 @@ import "@unocss/reset/tailwind.css";
 import "uno.css";
 import "~/styles/index.css";
 import { AudioProvider } from "~/context/AudioContext";
+import { PrefsProvider } from "~/settings/Effects";
+import { initialPrefs } from "~/settings/prefs";
+import { useMusicStore } from "~/stores/music";
+import type { SystemCommand } from "~/components/menus/AppleMenu";
 
 // macOS Tahoe transition variants
 // Login → Desktop: bright white bloom flash (exactly like macOS unlocking)
@@ -58,10 +62,21 @@ const bootVariants = {
 };
 
 export default function App() {
-  const [login, setLogin] = useState<boolean>(false);
+  // Settings › General › "Skip the login screen" (and Recruiter Mode).
+  const [login, setLogin] = useState<boolean>(() => initialPrefs().skipIntro);
+  // No white login flash when the intro was skipped on load.
+  const [flashOnLogin, setFlashOnLogin] = useState(() => !initialPrefs().skipIntro);
+  useEffect(() => {
+    if (!login) setFlashOnLogin(true);
+  }, [login]);
   const [booting, setBooting] = useState<boolean>(false);
   const [restart, setRestart] = useState<boolean>(false);
   const [sleep, setSleep] = useState<boolean>(false);
+  // Lock Screen: the login screen over a still-running desktop.
+  const [locked, setLocked] = useState(false);
+  // Sleep: display off; waking goes to the lock screen.
+  const [asleep, setAsleep] = useState(false);
+  const desktopRef = useRef<HTMLDivElement>(null);
 
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
@@ -115,13 +130,62 @@ export default function App() {
     return () => window.removeEventListener("system:restart", reboot);
   }, []);
 
+  const goToSleep = (): void => {
+    useMusicStore.getState().toggle(false);
+    setAsleep(true);
+  };
+
   const sleepMac = (e: React.MouseEvent): void => {
     e.stopPropagation();
-    setRestart(false);
-    setSleep(true);
-    setLogin(false);
-    setBooting(true);
+    goToSleep();
   };
+
+  const wake = (): void => {
+    setAsleep(false);
+    // From the desktop, waking asks for the password again (lock screen).
+    if (login) setLocked(true);
+  };
+
+  useEffect(() => {
+    const onCommand = (e: Event) => {
+      const cmd = (e as CustomEvent<SystemCommand>).detail;
+      if (cmd === "lock") setLocked(true);
+      else if (cmd === "sleep") goToSleep();
+    };
+    window.addEventListener("system:command", onCommand);
+    return () => window.removeEventListener("system:command", onCommand);
+  }, []);
+
+  // Logging out or rebooting drops any lock.
+  useEffect(() => {
+    if (!login) setLocked(false);
+  }, [login]);
+
+  // While locked, the desktop behind can't be focused, clicked or reached by
+  // its keyboard shortcuts.
+  useEffect(() => {
+    desktopRef.current?.toggleAttribute("inert", locked);
+    if (!locked) return;
+    const block = (e: KeyboardEvent) => {
+      if (!(e.target as HTMLElement)?.closest?.(".lock-overlay")) e.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", block, true);
+    return () => window.removeEventListener("keydown", block, true);
+  }, [locked]);
+
+  // Sleep: any key or click wakes.
+  useEffect(() => {
+    if (!asleep) return;
+    const t0 = Date.now();
+    const onKey = (e: KeyboardEvent) => {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      if (Date.now() - t0 > 400) wake();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asleep]);
 
   const getPage = () => {
     if (booting) return "boot";
@@ -163,6 +227,7 @@ export default function App() {
         {page === "desktop" && (
           <motion.div
             key="desktop"
+            ref={desktopRef}
             className="size-full"
             variants={desktopEnterVariants}
             initial="initial"
@@ -206,9 +271,50 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Lock Screen over the running desktop */}
+      <AnimatePresence>
+        {locked && page === "desktop" && (
+          <motion.div
+            key="lock"
+            className="size-full lock-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.35 } }}
+            exit={{ opacity: 0, scale: 1.03, transition: { duration: 0.35 } }}
+            style={{ position: "absolute", inset: 0, zIndex: 50 }}
+          >
+            <Login
+              setLogin={(v) => {
+                if (v === true) setLocked(false);
+              }}
+              shutMac={shutMac}
+              sleepMac={sleepMac}
+              restartMac={restartMac}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sleep: display off */}
+      <AnimatePresence>
+        {asleep && (
+          <motion.div
+            key="sleep"
+            className="sleep-screen"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.6 } }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            onClick={wake}
+          >
+            <motion.div className="hint" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 2.5, duration: 1 } }}>
+              Click or press any key to wake
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* White bloom flash — gentler fade-out on login→desktop */}
       <AnimatePresence>
-        {login && (
+        {login && flashOnLogin && (
           <motion.div
             key="flash"
             style={{
@@ -228,13 +334,22 @@ export default function App() {
   );
 }
 
+// Icons are images: a click that moves a few pixels made the browser start
+// dragging the image (a little "+" badge) and swallowed the click, so menus
+// opened only sometimes. Nothing here uses native image/link drag.
+window.addEventListener("dragstart", (e) => {
+  if (e.target instanceof HTMLImageElement || e.target instanceof HTMLAnchorElement) e.preventDefault();
+});
+
 const rootElement = document.getElementById("root") as HTMLElement;
 const root = createRoot(rootElement);
 
 root.render(
   <React.StrictMode>
-    <AudioProvider>
-      <App />
-    </AudioProvider>
+    <PrefsProvider>
+      <AudioProvider>
+        <App />
+      </AudioProvider>
+    </PrefsProvider>
   </React.StrictMode>
 );

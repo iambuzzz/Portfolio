@@ -11,9 +11,22 @@ export interface Project {
   github: string;
   live: string;
   highlights: string[];
-  /** Screenshot paths under public/, added when real screenshots are supplied. */
-  screenshots: string[];
+  /** App icon under public/projects/<id>/. */
+  logo: string;
+  /** Screenshots under public/projects/<id>/: `n.webp` (1600px) plus `n-thumb.webp` (480px). */
+  screenshots: Screenshot[];
 }
+
+export interface Screenshot {
+  src: string;
+  caption: string;
+}
+
+/** The small version of a project screenshot, for grids and file icons. */
+export const thumbOf = (src: string) => src.replace(/\.webp$/, "-thumb.webp");
+
+const shots = (id: string, captions: string[]): Screenshot[] =>
+  captions.map((caption, i) => ({ src: `/projects/${id}/${i + 1}.webp`, caption }));
 
 export interface Certification {
   id: string;
@@ -35,7 +48,7 @@ export const profile = {
   role: "Software Engineer | Full-Stack Developer | DSA & System Design Enthusiast",
   location: "Kota, Rajasthan, India",
   /** Replace with the real photo once provided (public/img/ui/…). */
-  avatar: "/img/ui/avatar-placeholder.svg",
+  avatar: "/img/Profile/avatar.jpg",
   resume: "/resume.pdf",
   resumeFileName: "Ambuj_Jaiswal_Resume.pdf",
 
@@ -82,14 +95,15 @@ export const profile = {
       date: "Jan 2026",
       stack: ["MERN", "Kafka", "gRPC", "Redis", "AWS", "Nginx", "Redux Toolkit"],
       github: "https://github.com/iambuzzz/DevTinder",
-      live: "https://iambuzzdev.in/",
+      live: "https://devtinder.iambuzzdev.in/",
       highlights: [
         "Architected a scalable platform behind an Nginx Load Balancer, integrating Razorpay for subscriptions, AWS S3 for media storage, and Redux Toolkit for global state.",
         "Engineered a distributed real-time chat across multiple Node.js nodes, utilizing Redis for centralized sessions and gRPC for low-latency, cross-server message routing.",
         "Transitioned to an Event-Driven Architecture with Apache Kafka, ensuring message durability via offline queues, and optimizing online presence tracking by reducing O(N²) broadcast overheads to O(1) targeted events.",
         "Streamlined operations by offloading emails (AWS SES) to a Bull (Redis) background queue, and deployed on AWS EC2 with PM2 & Cloudflare SSL for high availability."
       ],
-      screenshots: []
+      logo: "/projects/devtinder/logo.png",
+      screenshots: shots("devtinder", ["Landing page", "Swipe feed", "Connections", "Messages", "Real-time chat", "Gold membership"])
     },
     {
       id: "buddyboard",
@@ -106,7 +120,8 @@ export const profile = {
         "Integrated engagement drivers including an auto-saving notes editor, goal tracking, and a streak system, managing complex client-side state across dynamic UI components.",
         "Designed a polished, theme-aware UI with Tailwind CSS and Framer Motion, implementing engaging animations (card-flips, overlays) and a highly responsive dark mode."
       ],
-      screenshots: []
+      logo: "/projects/buddyboard/logo.svg",
+      screenshots: shots("buddyboard", ["Daily tasks with timers", "Study stats: trend", "Study stats: daily hours", "Goals", "Auto-saving notes"])
     },
     {
       id: "foodiehub",
@@ -123,7 +138,8 @@ export const profile = {
         "Optimized bundle size via dynamic code splitting (React.lazy & Suspense) for sub-pages, and utilized Higher-Order Components (HOC) to badge promoted restaurants.",
         "Designed a responsive UI with Tailwind CSS featuring category accordions, instant search, and rating filters; authored component tests using Vitest and React Testing Library."
       ],
-      screenshots: []
+      logo: "/projects/foodiehub/logo.png",
+      screenshots: shots("foodiehub", ["Restaurants", "Restaurant menu", "Menu category", "Cart", "About", "Contact"])
     }
   ] satisfies Project[],
 

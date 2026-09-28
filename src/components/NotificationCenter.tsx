@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import CalendarWidget from "./widgets/CalendarWidget";
 import WeatherWidget from "./widgets/WeatherWidget";
+import { useRef } from "react";
 import { useWindowSize } from "~/hooks/useWindowSize";
+import { useWidgetStore } from "~/stores/widgets";
 
 interface NotificationCenterProps {
   show: boolean;
@@ -48,7 +50,25 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
 
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
-  const unread = notifications.filter((n) => !n.read).length;
+  // Phone shows how many there are (like iOS); the laptop keeps the unread count.
+  const unread = isMobile ? notifications.length : notifications.filter((n) => !n.read).length;
+
+  // Phone: swipe up anywhere on the sheet closes it (once scrolled to the end).
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const begin = (x: number, y: number, target?: EventTarget | null) => {
+    // A swipe that starts on the scrolling notifications list scrolls it; it
+    // must not close the sheet.
+    const list = (target as HTMLElement | null)?.closest?.(".m-nc-list");
+    start.current = list && list.scrollHeight > list.clientHeight + 1 ? null : { x, y };
+  };
+  const end = (x: number, y: number, el: HTMLElement) => {
+    const s0 = start.current;
+    start.current = null;
+    if (!isMobile || !s0) return;
+    const dy = y - s0.y;
+    const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+    if (dy < -70 && Math.abs(x - s0.x) < Math.abs(dy) && atEnd) onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -57,6 +77,7 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
           {/* Transparent click-outside overlay — frosted on mobile */}
           <motion.div
             key="nc-backdrop"
+            className={isMobile ? "m-nc-scrim" : undefined}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -75,6 +96,7 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
           {/* Staggered column of discrete glass cards */}
           <motion.div
             key="nc-cards"
+            className={isMobile ? "m-nc-sheet" : undefined}
             variants={isMobile ? undefined : containerVariants}
             initial={isMobile ? { y: "-100%", opacity: 0.5 } : "hidden"}
             animate={isMobile ? { y: 0, opacity: 1 } : "visible"}
@@ -83,18 +105,26 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
             style={{
               position: "fixed",
               top: isMobile ? 0 : 40,
+              bottom: isMobile ? 0 : "auto",
               right: isMobile ? 12 : 12,
               left: isMobile ? 12 : "auto",
               width: isMobile ? "calc(100% - 24px)" : 320,
-              padding: isMobile ? "48px 0 20px" : 0,
-              maxHeight: isMobile ? "calc(100vh - 40px)" : "none",
+              padding: isMobile ? "50px 0 18px" : 0,
               overflowY: isMobile ? "auto" : "visible",
               zIndex: isMobile ? 9999 : 95,
               display: "flex",
               flexDirection: "column",
               gap: 8,
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              // Phone: the sheet fills the screen, so tapping its empty space closes it.
+              if (isMobile && e.target === e.currentTarget) onClose();
+            }}
+            onTouchStart={(e) => begin(e.touches[0].clientX, e.touches[0].clientY, e.target)}
+            onTouchEnd={(e) => end(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.currentTarget)}
+            onMouseDown={(e) => begin(e.clientX, e.clientY, e.target)}
+            onMouseUp={(e) => end(e.clientX, e.clientY, e.currentTarget)}
           >
             {/* Header card */}
             <motion.div
@@ -144,7 +174,7 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
             </motion.div>
 
             {/* Notifications card */}
-            <motion.div variants={cardVariants} style={{ ...CARD, overflow: "hidden" }}>
+            <motion.div variants={cardVariants} className={isMobile ? "m-nc-list" : undefined} style={{ ...CARD, overflow: "hidden" }}>
               {notifications.length === 0 ? (
                 <div style={{ padding: "20px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
                   No notifications
@@ -211,33 +241,42 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
               )}
             </motion.div>
 
+            {isMobile && (
+              <div aria-hidden style={{ position: "fixed", left: "50%", bottom: 8, width: 138, height: 5, marginLeft: -69, borderRadius: 3, background: "rgba(255,255,255,0.85)", pointerEvents: "none" }} />
+            )}
+
             {/* Weather card */}
-            <motion.div variants={cardVariants}>
+            <motion.div variants={cardVariants} style={{ alignSelf: isMobile ? "flex-start" : undefined }}>
               <WeatherWidget />
             </motion.div>
 
             {/* Calendar card */}
-            <motion.div variants={cardVariants}>
+            <motion.div variants={cardVariants} style={{ alignSelf: isMobile ? "flex-start" : undefined }}>
               <CalendarWidget />
             </motion.div>
 
-            {/* Edit Widgets */}
+            {/* Phone: Close. Desktop: opens the widget gallery. */}
             <motion.div variants={cardVariants} style={{ display: "flex", justifyContent: "center", paddingTop: 2 }}>
               <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (!isMobile) useWidgetStore.getState().setGalleryOpen(true);
+                }}
                 style={{
                   background: "rgba(120,120,128,0.32)",
                   backdropFilter: "blur(20px)",
                   WebkitBackdropFilter: "blur(20px)",
                   border: "none",
                   borderRadius: 20,
-                  padding: "5px 14px",
-                  fontSize: 12,
+                  padding: isMobile ? "8px 22px" : "5px 14px",
+                  fontSize: isMobile ? 14 : 12,
                   fontWeight: 500,
                   color: "white",
                   cursor: "pointer",
                 }}
               >
-                Edit Widgets
+                {isMobile ? "Close" : "Edit Widgets"}
               </button>
             </motion.div>
           </motion.div>

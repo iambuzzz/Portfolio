@@ -1,11 +1,44 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { profile } from "~/data/profile";
+import { MESSAGES_FALLBACK, MESSAGES_LIMITS } from "~/data/messages";
+
+const STORAGE_KEY = "macos-messages";
+const nowTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// Visitor messages and AI replies, per conversation, kept in this browser.
+type Saved = Record<string, Message[]>;
+const loadSaved = (): Saved => {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+};
+
+async function askAssistant(history: Message[]): Promise<string> {
+  const res = await fetch("/api/messages/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      history: history
+        .filter((m) => !m.error)
+        .slice(-MESSAGES_LIMITS.maxTurns)
+        .map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text }))
+    })
+  });
+  if (res.status === 429) return "You're sending messages a bit fast. Give it a minute and try again 🙂";
+  if (!res.ok) throw new Error(String(res.status));
+  const { reply } = await res.json();
+  return reply || MESSAGES_FALLBACK;
+}
 
 interface Message {
   id: string;
   text: string;
   from: "me" | "them";
   time: string;
+  /** Couldn't reach the assistant; not sent back as context. */
+  error?: boolean;
 }
 
 interface Conversation {
@@ -36,7 +69,7 @@ const CONVERSATIONS: Conversation[] = [
   {
     id: "intro",
     name: profile.name,
-    avatar: "AJ",
+    avatar: profile.avatar,
     preview: "Hey! 👋 Thanks for visiting.",
     time: "Now",
     unread: 3,
@@ -74,42 +107,69 @@ const CONVERSATIONS: Conversation[] = [
 ];
 
 export default function MessagesApp() {
-  const [activeConv, setActiveConv] = useState(CONVERSATIONS[0]);
+  const [activeId, setActiveId] = useState(CONVERSATIONS[0].id);
   // Phone-sized / narrow windows: iOS-style list → conversation navigation.
   const [rootRef, rootWidth] = useElementWidth();
   const narrow = rootWidth > 0 && rootWidth < 600;
   const [narrowView, setNarrowView] = useState<"list" | "chat">("list");
   const [input, setInput] = useState("");
-  const [conversations, setConversations] = useState(CONVERSATIONS);
+  const [search, setSearch] = useState("");
+  const [saved, setSaved] = useState<Saved>(loadSaved);
+  const [unread, setUnread] = useState<Record<string, number>>(() => Object.fromEntries(CONVERSATIONS.map((c) => [c.id, c.unread ?? 0])));
+  const [typing, setTyping] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const conversations = CONVERSATIONS.map((c) => {
+    const extra = saved[c.id] ?? [];
+    const last = extra[extra.length - 1];
+    return { ...c, messages: [...c.messages, ...extra], preview: last ? last.text : c.preview, time: last ? last.time : c.time, unread: unread[c.id] };
+  });
+  const activeConv = conversations.find((c) => c.id === activeId)!;
+  const q = search.trim().toLowerCase();
+  const listed = q ? conversations.filter((c) => `${c.name} ${c.messages.map((m) => m.text).join(" ")}`.toLowerCase().includes(q)) : conversations;
 
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } catch {
+      // storage blocked: chat just won't persist
     }
-  }, [activeConv, conversations]); // scroll to bottom on new message or conversation change
+  }, [saved]);
 
-  const send = () => {
-    if (!input.trim()) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text: input.trim(),
-      from: "me",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeConv.id
-          ? { ...c, messages: [...c.messages, newMsg], preview: input.trim(), time: "Now" }
-          : c
-      )
-    );
-    setActiveConv((prev) => ({
-      ...prev,
-      messages: [...prev.messages, newMsg],
-    }));
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [activeId, saved, typing]);
+
+  // The open conversation counts as read (on phones, only once it's shown).
+  useEffect(() => {
+    if (!narrow || narrowView === "chat") setUnread((u) => (u[activeId] ? { ...u, [activeId]: 0 } : u));
+  }, [activeId, narrow, narrowView]);
+
+  const add = (convId: string, msg: Message) => setSaved((prev) => ({ ...prev, [convId]: [...(prev[convId] ?? []), msg] }));
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || typing) return;
+    const convId = activeConv.id;
+    const mine: Message = { id: Date.now().toString(), text, from: "me", time: nowTime() };
+    const history = [...activeConv.messages, mine];
+    add(convId, mine);
     setInput("");
+    setTyping(convId);
+    let reply: Message;
+    try {
+      reply = { id: `${Date.now()}r`, text: await askAssistant(history), from: "them", time: nowTime() };
+    } catch {
+      reply = { id: `${Date.now()}r`, text: MESSAGES_FALLBACK, from: "them", time: nowTime(), error: true };
+    }
+    add(convId, reply);
+    setTyping(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
+
+  const clearChat = () => setSaved((prev) => ({ ...prev, [activeConv.id]: [] }));
 
   return (
     <div className="app-theme"
@@ -160,6 +220,9 @@ export default function MessagesApp() {
             <span className="i-ph:magnifying-glass" style={{ width: "11px", height: "11px", opacity: 0.5 }} />
             <input
               placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search messages"
               style={{
                 background: "none",
                 border: "none",
@@ -171,11 +234,18 @@ export default function MessagesApp() {
             />
           </div>
           <button
+            type="button"
+            title="Message Ambuj"
+            aria-label="New message"
+            onClick={() => {
+              setActiveId("intro");
+              setNarrowView("chat");
+              setTimeout(() => inputRef.current?.focus(), 50);
+            }}
             style={{
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontSize: "18px",
               color: "#007AFF",
               padding: "0 2px",
               display: "flex",
@@ -183,21 +253,19 @@ export default function MessagesApp() {
               justifyContent: "center",
             }}
           >
-            <span className="i-ph:pencil-simple" style={{ width: "18px", height: "18px" }} />
+            <span className="i-ph:note-pencil" style={{ width: "18px", height: "18px" }} />
           </button>
         </div>
 
         {/* Conversations */}
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {conversations.map((conv) => (
+          {listed.map((conv) => (
             <button
               key={conv.id}
               onClick={() => {
-                setActiveConv(conv);
+                setActiveId(conv.id);
                 setNarrowView("chat");
-                setConversations((prev) =>
-                  prev.map((c) => (c.id === conv.id ? { ...c, unread: 0 } : c))
-                );
+                setUnread((u) => ({ ...u, [conv.id]: 0 }));
               }}
               style={{
                 display: "flex",
@@ -230,7 +298,7 @@ export default function MessagesApp() {
                 >
                   {conv.avatar.startsWith("i-")
                     ? <span className={conv.avatar} style={{ width: "20px", height: "20px", color: "white" }} />
-                    : conv.avatar}
+                    : <img src={conv.avatar} alt="" draggable={false} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />}
                 </div>
                 {conv.online && (
                   <div
@@ -340,16 +408,27 @@ export default function MessagesApp() {
           >
             {activeConv.avatar.startsWith("i-")
               ? <span className={activeConv.avatar} style={{ width: "16px", height: "16px", color: "white" }} />
-              : activeConv.avatar}
+              : <img src={activeConv.avatar} alt="" draggable={false} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />}
           </div>
           <div>
             <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--a-text)" }}>
               {activeConv.name}
             </div>
-            {activeConv.online && (
-              <div style={{ fontSize: "11px", color: "#34C759" }}>Active now</div>
-            )}
+            <div style={{ fontSize: "11px", color: "var(--a-text-2)" }}>
+              Replies by {profile.firstName}'s AI assistant
+            </div>
           </div>
+          <div style={{ flex: 1 }} />
+          {(saved[activeConv.id]?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              title="Clear this chat"
+              style={{ border: "none", background: "var(--a-fill)", color: "var(--a-text)", borderRadius: 8, padding: "4px 10px", fontSize: 12 }}
+            >
+              Clear chat
+            </button>
+          )}
         </div>
 
         {/* Messages */}
@@ -365,12 +444,12 @@ export default function MessagesApp() {
           }}
         >
           <AnimatePresence>
-            {activeConv.messages.map((msg, i) => (
+            {activeConv.messages.map((msg) => (
               <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: i * 0.04, duration: 0.25, ease: [0.34, 1.56, 0.64, 1] }}
+                transition={{ duration: 0.25, ease: [0.34, 1.56, 0.64, 1] }}
                 style={{
                   display: "flex",
                   justifyContent: msg.from === "me" ? "flex-end" : "flex-start",
@@ -401,6 +480,16 @@ export default function MessagesApp() {
               </motion.div>
             ))}
           </AnimatePresence>
+          {typing === activeConv.id && (
+            <div className="msg-typing" aria-label="Typing">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: "center", fontSize: 10.5, color: "var(--a-text-3)", padding: "0 12px 4px" }}>
+          AI replies use only {profile.firstName}'s résumé and can be wrong. For anything important, email {profile.email}.
         </div>
 
         {/* Input */}
@@ -426,10 +515,13 @@ export default function MessagesApp() {
             }}
           >
             <input
+              ref={inputRef}
               value={input}
+              maxLength={MESSAGES_LIMITS.maxChars}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="iMessage"
+              onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && send()}
+              placeholder={`Message ${profile.firstName}…`}
+              aria-label="Message"
               style={{
                 flex: 1,
                 background: "none",
@@ -442,7 +534,8 @@ export default function MessagesApp() {
           </div>
           <button
             onClick={send}
-            disabled={!input.trim()}
+            aria-label="Send"
+            disabled={!input.trim() || !!typing}
             style={{
               width: 32,
               height: 32,

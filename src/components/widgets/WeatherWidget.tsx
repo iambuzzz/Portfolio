@@ -1,5 +1,5 @@
 // Live weather for where I am (Open-Meteo: free, no API key).
-const LOCATION = { name: "Kota", lat: 25.2138, lon: 75.8648, tz: "Asia/Kolkata" };
+export const LOCATION = { name: "Kota", lat: 25.2138, lon: 75.8648, tz: "Asia/Kolkata" };
 
 interface Weather {
   temp: number;
@@ -44,7 +44,7 @@ const fetchWeather = () =>
     })
     .catch(() => null));
 
-function useWeather() {
+export function useWeather() {
   const [weather, setWeather] = useState<Weather | null>(null);
   useEffect(() => {
     let alive = true;
@@ -61,7 +61,7 @@ const localTime = () =>
 
 
 // SF Symbol-style SVG weather icons
-const WeatherIcon = ({ type, size = 36 }: { type: string; size?: number }) => {
+export const WeatherIcon = ({ type, size = 36 }: { type: string; size?: number }) => {
   const s = size;
   if (type === "sunny") return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none">

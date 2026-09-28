@@ -1,43 +1,18 @@
-import React from "react";
-import { format } from "date-fns";
-import { apps, launchpadApps } from "~/configs";
-import type { LaunchpadData, AppsData } from "~/types";
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { apps } from "~/configs";
+import { profile, thumbOf, type Certification, type Project } from "~/data/profile";
+import { useStore } from "~/stores";
+import { useWidgetStore } from "~/stores/widgets";
+import { usePrefs } from "~/settings/prefs";
+import { useActivity, unlock } from "~/settings/activity";
+import { openSettings } from "~/settings/nav";
+import { PANE_GROUPS } from "~/settings/panes";
+import { Tile } from "~/settings/ui";
+import { askSiri } from "~/utils/siriBridge";
 
-const APPS: { [key: string]: (LaunchpadData | AppsData)[] } = {
-  app: apps,
-  portfolio: launchpadApps
-};
-
-const appLibraryCategories = [
-  {
-    name: "Social",
-    apps: ["messages", "facetime", "mail"]
-  },
-  {
-    name: "Productivity",
-    apps: ["notes", "clock", "terminal", "vscode", "typora", "bear"]
-  },
-  {
-    name: "Entertainment",
-    apps: ["spotify", "photos"]
-  },
-  {
-    name: "Utilities",
-    apps: ["system-settings", "app-store", "safari", "maps", "finder", "siri"]
-  }
-];
-
-const getRandom = (min: number, max: number) => {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
-
-const getRandomDate = () => {
-  const timeStamp = new Date().getTime();
-  const randomStamp = getRandom(0, timeStamp);
-  return format(randomStamp, "MM/dd/yyyy");
-};
+// Spotlight: search apps, Ambuj's projects, skills, certificates, settings
+// and quick actions. Everything shown comes from the profile or the site
+// itself; nothing is made up.
 
 interface SpotlightProps {
   toggleSpotlight: () => void;
@@ -46,413 +21,582 @@ interface SpotlightProps {
   btnRef: React.RefObject<HTMLDivElement>;
 }
 
-const AppIcon = ({ app, sizeClass }: { app: any; sizeClass: string }) => {
-  const isPortfolio = !!app.link || launchpadApps.some(p => p.id === app.id);
-  
-  if (isPortfolio) {
-    return (
-      <div className={`${sizeClass} rounded-[22.5%] shadow-sm overflow-hidden flex items-center justify-center border border-black/10 dark:border-white/10 relative ${app.id === 'skill-exchange' ? 'bg-black' : 'bg-white'}`}>
-        <img src={app.img} alt={app.title} title={app.title} className={`${app.id === "library" ? "w-[60%] h-[60%] object-contain" : "w-full h-full object-cover"}`} />
-      </div>
-    );
-  }
-  return <img src={app.img} alt={app.title} title={app.title} className={`${sizeClass} object-contain drop-shadow-sm`} />;
+type Kind = "app" | "project" | "action" | "skill" | "setting" | "cert" | "siri";
+
+interface Item {
+  key: string;
+  kind: Kind;
+  title: string;
+  sub?: string;
+  keywords?: string;
+  icon: ReactNode;
+  run: () => void;
+  alt?: { label: string; run: () => void };
+  hint?: string;
+  preview: () => ReactNode;
+}
+
+const SECTION: Record<Kind, string> = {
+  app: "Applications",
+  project: "Projects",
+  action: "Actions",
+  skill: "Skills",
+  setting: "System Settings",
+  cert: "Certificates",
+  siri: "Siri"
+};
+const ORDER: Kind[] = ["app", "project", "action", "skill", "setting", "cert", "siri"];
+
+const APP_INFO: Record<string, string> = {
+  finder: "Browse Ambuj's projects, résumé and certificates as files.",
+  about: "Ambuj's profile: education, projects, skills and contact.",
+  bear: "Notes about each project, written from the résumé.",
+  safari: "Opens Ambuj's live projects inside the portfolio.",
+  vscode: "Read DevTinder's source code in VS Code for the web.",
+  facetime: "Say hi on camera. Photos never leave your device.",
+  terminal: "A sandboxed terminal with commands, games and easter eggs. Try `help`.",
+  github: "Ambuj's GitHub profile.",
+  siri: "Ask anything about Ambuj, by voice or by typing.",
+  "system-settings": "Appearance, Dock, widgets, Siri, achievements and more.",
+  notes: "Quick notes. Saved in your browser.",
+  spotify: "Search and play music (JioSaavn).",
+  maps: "Where Ambuj studies: Kota, Rajasthan.",
+  messages: "Get in touch with Ambuj.",
+  photos: "Certificates and project screenshots.",
+  clock: "World clock, alarm, stopwatch and timer.",
+  mail: "Send Ambuj an email from right here."
 };
 
-export default function Spotlight({
-  toggleSpotlight,
-  openApp,
-  toggleLaunchpad,
-  btnRef
-}: SpotlightProps) {
-  const spotlightRef = useRef<HTMLDivElement>(null);
+// Extra words people might type for an app.
+const APP_KEYWORDS: Record<string, string> = {
+  finder: "files documents folders",
+  about: "ambuj profile contact me",
+  bear: "notes projects",
+  safari: "browser web internet",
+  vscode: "code editor source",
+  facetime: "camera video photo",
+  terminal: "shell command line console cli hacker",
+  siri: "assistant ai voice ask",
+  "system-settings": "preferences settings",
+  notes: "text write",
+  spotify: "music songs play",
+  maps: "location kota iiit",
+  messages: "chat contact",
+  photos: "certificates pictures images",
+  clock: "time alarm stopwatch timer",
+  mail: "email contact hire"
+};
+
+const DEFAULT_SUGGESTED = ["about", "finder", "terminal", "siri", "spotify", "system-settings"];
+
+// ── Matching ────────────────────────────────────────────────────────────────
+const words = (s: string) => s.toLowerCase().split(/[\s\-–·/&().,]+/).filter(Boolean);
+
+function score(q: string, it: Item): number {
+  const t = it.title.toLowerCase();
+  if (t === q) return 100;
+  if (t.startsWith(q)) return 90 - Math.min(t.length - q.length, 20) * 0.1;
+  const tw = words(it.title);
+  if (tw.some((w) => w.startsWith(q))) return 80;
+  if (q.length >= 2 && tw.map((w) => w[0]).join("").startsWith(q)) return 72;
+  if (q.length >= 3 && t.includes(q)) return 62;
+  const kw = words(it.keywords ?? "");
+  if (q.length >= 2 && kw.some((w) => w.startsWith(q))) return 50;
+  if (q.includes(" ") && `${t} ${(it.keywords ?? "").toLowerCase()}`.includes(q)) return 50;
+  // Loose "typo-friendly" match on short names: letters in order (e.g. "trml" → Terminal).
+  if (q.length >= 3 && t.length <= 16 && t[0] === q[0]) {
+    let i = 0;
+    for (const ch of t) if (ch === q[i]) i++;
+    if (i === q.length) return 20;
+  }
+  return 0;
+}
+
+const Highlight = ({ text, q }: { text: string; q: string }) => {
+  if (!q) return <>{text}</>;
+  const i = text.toLowerCase().indexOf(q);
+  if (i < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark>{text.slice(i, i + q.length)}</mark>
+      {text.slice(i + q.length)}
+    </>
+  );
+};
+
+const AppImg = ({ src, size }: { src: string; size: number }) => (
+  <img src={src.startsWith("/") || src.startsWith("http") ? src : `/${src}`} alt="" style={{ width: size, height: size, objectFit: "contain" }} draggable={false} />
+);
+
+const ProjectIcon = ({ p, size }: { p: Project; size: number }) => (
+  <img
+    src={p.logo}
+    alt=""
+    style={{ width: size, height: size, borderRadius: size * 0.225, boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}
+    draggable={false}
+  />
+);
+
+const Kbd = ({ children }: { children: ReactNode }) => <kbd className="sl-kbd">{children}</kbd>;
+
+// ── Component ───────────────────────────────────────────────────────────────
+export default function Spotlight({ toggleSpotlight, openApp, toggleLaunchpad, btnRef }: SpotlightProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const [sel, setSel] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const dark = useStore((s) => s.dark);
+  const toggleDark = useStore((s) => s.toggleDark);
+  const nightShift = usePrefs((s) => s.nightShift);
+  const appOpens = useActivity((s) => s.appOpens);
 
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [clickedID, setClickedID] = useState("");
-  const [doubleClicked, setDoubleClicked] = useState<boolean>(false);
+  useClickOutside(rootRef, toggleSpotlight, [btnRef]);
+  useEffect(() => inputRef.current?.focus(), []);
 
-  const [searchText, setSearchText] = useState("");
-  const [curDetails, setCurDetails] = useState<any>(null);
+  const done = (fn: () => void) => () => {
+    fn();
+    toggleSpotlight();
+  };
+  const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
-  const [appIdList, setAppIdList] = useState<string[]>([]);
-  const [appList, setAppList] = useState<JSX.Element | null>(null);
+  const items = useMemo<Item[]>(() => {
+    const list: Item[] = [];
 
-  const [activeTab, setActiveTab] = useState("All");
-
-  const textWhite = "text-white";
-  const textBlack = "text-c-black";
-  const textSelected = "bg-blue-500";
-
-  useClickOutside(spotlightRef, toggleSpotlight, [btnRef]);
-
-  useEffect(() => {
-    updateAppList();
-  }, [searchText]);
-
-  useEffect(() => {
-    updateCurrentDetails();
-  }, [selectedIndex]);
-
-  useEffect(() => {
-    if (appIdList.length === 0) return;
-    // find app's index given its id
-    const newSelectedIndex = appIdList.findIndex((item) => {
-      return item === clickedID;
+    // Applications
+    for (const a of apps) {
+      if (a.id === "launchpad") continue;
+      const opens = appOpens[a.id] ?? 0;
+      list.push({
+        key: `app:${a.id}`,
+        kind: "app",
+        title: a.title,
+        sub: a.link ? "Website" : "Application",
+        keywords: `${a.id} ${APP_KEYWORDS[a.id] ?? ""}`,
+        icon: <AppImg src={a.img} size={22} />,
+        run: done(() => (a.link ? open(a.link) : openApp(a.id))),
+        hint: "Open",
+        preview: () => (
+          <div className="sl-pv-center">
+            <AppImg src={a.img} size={84} />
+            <div className="sl-pv-title">{a.title}</div>
+            <div className="sl-pv-kind">{a.link ? "Website" : "Application"}</div>
+            {APP_INFO[a.id] && <p className="sl-pv-text">{APP_INFO[a.id]}</p>}
+            {opens > 0 && (
+              <div className="sl-pv-meta">
+                You've opened it {opens} time{opens === 1 ? "" : "s"}
+              </div>
+            )}
+          </div>
+        )
+      });
+    }
+    list.push({
+      key: "app:launchpad",
+      kind: "app",
+      title: "Launchpad",
+      sub: "Application",
+      keywords: "all apps projects grid",
+      icon: <AppImg src="img/icons/launchpad.png" size={22} />,
+      run: done(() => toggleLaunchpad(true)),
+      hint: "Open",
+      preview: () => (
+        <div className="sl-pv-center">
+          <AppImg src="img/icons/launchpad.png" size={84} />
+          <div className="sl-pv-title">Launchpad</div>
+          <div className="sl-pv-kind">Application</div>
+          <p className="sl-pv-text">Every app and project in one place.</p>
+        </div>
+      )
     });
-    // update index
-    updateHighlight(selectedIndex, newSelectedIndex);
-    setSelectedIndex(newSelectedIndex);
-  }, [clickedID]);
 
-  useEffect(() => {
-    if (doubleClicked) {
-      launchSelectedApp();
-      setDoubleClicked(false);
+    // Projects
+    for (const p of profile.projects) {
+      list.push({
+        key: `project:${p.id}`,
+        kind: "project",
+        title: p.name,
+        sub: p.stack.slice(0, 3).join(" · "),
+        keywords: `project ${p.stack.join(" ")}`,
+        icon: <ProjectIcon p={p} size={22} />,
+        run: done(() => open(p.live)),
+        hint: "Open live site",
+        alt: { label: "Open on GitHub", run: done(() => open(p.github)) },
+        preview: () => (
+          <div>
+            <div className="sl-pv-head">
+              <ProjectIcon p={p} size={52} />
+              <div>
+                <div className="sl-pv-title" style={{ marginTop: 0 }}>
+                  {p.name}
+                </div>
+                <div className="sl-pv-kind">Project · {p.date}</div>
+              </div>
+            </div>
+            {p.screenshots[0] && (
+              <img className="sl-pv-cert" src={thumbOf(p.screenshots[0].src)} alt={`${p.name}: ${p.screenshots[0].caption}`} style={{ marginTop: 14, aspectRatio: "16 / 9", objectFit: "cover" }} />
+            )}
+            <p className="sl-pv-text" style={{ textAlign: "left" }}>
+              {p.tagline}
+            </p>
+            <div className="sl-chips">
+              {p.stack.map((s) => (
+                <span key={s}>{s}</span>
+              ))}
+            </div>
+            <div className="sl-pv-actions">
+              <button type="button" className="primary" onClick={done(() => open(p.live))}>
+                Live site
+              </button>
+              <button type="button" onClick={done(() => open(p.github))}>
+                GitHub
+              </button>
+            </div>
+          </div>
+        )
+      });
     }
-  }, [doubleClicked]);
 
-  const search = (type: string) => {
-    if (searchText === "") return [];
-
-    const text = searchText.toLowerCase();
-    return APPS[type].filter(
-      (item: LaunchpadData | AppsData) =>
-        item.title.toLowerCase().includes(text) || item.id.toLowerCase().includes(text)
+    // Actions
+    const action = (
+      id: string,
+      title: string,
+      icon: string,
+      color: string,
+      text: string,
+      run: () => void,
+      keywords = "",
+      keepOpen = false
+    ): Item => ({
+      key: `action:${id}`,
+      kind: "action",
+      title,
+      sub: "Action",
+      keywords,
+      icon: <Tile icon={icon} color={color} size={22} />,
+      run: keepOpen ? run : done(run),
+      hint: "Run",
+      preview: () => (
+        <div className="sl-pv-center">
+          <Tile icon={icon} color={color} size={72} />
+          <div className="sl-pv-title">{title}</div>
+          <p className="sl-pv-text">{text}</p>
+        </div>
+      )
+    });
+    list.push(
+      action("resume", "Download Résumé", "i-ph:download-simple-bold", "#34c759", `Save ${profile.resumeFileName} (PDF).`, () => {
+        const a = document.createElement("a");
+        a.href = profile.resume;
+        a.download = profile.resumeFileName;
+        a.click();
+        unlock("resume");
+      }, "resume cv pdf download"),
+      action("email", "Email Ambuj", "i-ph:envelope-simple-fill", "#007aff", `Write to ${profile.email} in your mail app.`, () => {
+        location.href = `mailto:${profile.email}`;
+      }, "mail contact hire"),
+      action("message", "Send a Message", "i-ph:paper-plane-tilt-fill", "#34c759", "Write to Ambuj right here, without leaving the site.", () => openApp("mail"), "contact hire mail"),
+      action(
+        "copy-email",
+        copied ? "Email Address Copied" : "Copy Email Address",
+        copied ? "i-ph:check-bold" : "i-ph:copy-fill",
+        "#8e8e93",
+        profile.email,
+        () => {
+          navigator.clipboard?.writeText(profile.email).then(() => setCopied(true), () => {});
+        },
+        "clipboard contact mail",
+        true
+      ),
+      action("dark", dark ? "Switch to Light Mode" : "Switch to Dark Mode", dark ? "i-ph:sun-fill" : "i-ph:moon-fill", "#1c1c1e", "Change the site's appearance.", toggleDark, "theme appearance dark light night"),
+      action(
+        "nightshift",
+        nightShift ? "Turn Night Shift Off" : "Turn Night Shift On",
+        "i-ph:sun-horizon-fill",
+        "#ff9500",
+        "Warmer colours, easier on the eyes at night.",
+        () => usePrefs.getState().set("nightShift", !nightShift),
+        "warm display screen eyes"
+      ),
+      action("widgets", "Edit Widgets", "i-ph:squares-four-fill", "#5856d6", "Add, remove and arrange desktop widgets.", () => useWidgetStore.getState().setGalleryOpen(true), "widget calendar weather clock github battery"),
+      action("share", "Share This Portfolio", "i-ph:qr-code-bold", "#34c759", "QR code, copy link, or share to WhatsApp, LinkedIn and X.", () => openSettings("share"), "qr link send"),
+      action("achievements", "Show Achievements", "i-ph:trophy-fill", "#ff9f0a", "See which of the hidden achievements you've unlocked.", () => openSettings("screen-time"), "trophy easter eggs screen time")
     );
-  };
-
-  const handleClick = (id: string) => {
-    setClickedID(id);
-  };
-
-  const handleDoubleClick = (id: string) => {
-    setClickedID(id);
-    setDoubleClicked(true);
-  };
-
-  const launchSelectedApp = () => {
-    if (curDetails.type === "app" && !curDetails.link) {
-      const id = curDetails.id;
-      if (id === "launchpad") toggleLaunchpad(true);
-      else openApp(id);
-      toggleSpotlight();
-    } else {
-      window.open(curDetails.link);
-      toggleSpotlight();
-    }
-  };
-
-  const getTypeAppList = (type: string, startIndex: number) => {
-    const result = search(type);
-    const typeAppList = [];
-    const typeAppIdList = [];
-
-    for (const app of result) {
-      const curIndex = startIndex + typeAppList.length;
-      const bg = curIndex === 0 ? textSelected : "bg-transparent";
-      const text = curIndex === 0 ? textWhite : textBlack;
-
-      if (curIndex === 0) setCurrentDetailsWithType(app, type);
-
-      typeAppList.push(
-        <li
-          id={`spotlight-${app.id}`}
-          key={`spotlight-${app.id}`}
-          className={`pr-1 h-7 w-full flex rounded ${bg} ${text} cursor-default`}
-          data-app-type={type}
-          onClick={() => handleClick(app.id)}
-          onDoubleClick={() => handleDoubleClick(app.id)}
-        >
-          <div className="w-8 flex items-center justify-center">
-            <AppIcon app={app} sizeClass="w-5 h-5" />
-          </div>
-          <div className="flex-1 hstack overflow-hidden whitespace-nowrap pl-1">
-            {app.title}
-          </div>
-        </li>
-      );
-      typeAppIdList.push(app.id);
+    const socials: [string, string, string][] = [
+      ["GitHub", profile.socials.github, "i-ph:github-logo-fill"],
+      ["LinkedIn", profile.socials.linkedin, "i-ph:linkedin-logo-fill"],
+      ["LeetCode", profile.socials.leetcode, "i-ph:code-bold"],
+      ["CodeChef", profile.socials.codechef, "i-ph:chef-hat-fill"],
+      ["Codolio", profile.socials.codolio, "i-ph:chart-bar-fill"]
+    ];
+    for (const [name, url, icon] of socials) {
+      list.push(action(`social-${name}`, `Open ${name} Profile`, icon, "#1c1c1e", url.replace(/^https:\/\/(www\.)?/, ""), () => open(url), `${name} social profile`));
     }
 
-    return {
-      appList: typeAppList,
-      appIdList: typeAppIdList
+    // Skills (only those on the résumé)
+    for (const [category, skills] of Object.entries(profile.skills)) {
+      for (const skill of skills) {
+        const base = skill.toLowerCase().replace(/\.js$/, "");
+        const usedIn = profile.projects.filter((p) => p.stack.some((s) => s.toLowerCase().replace(/\.js$/, "").includes(base) || base.includes(s.toLowerCase())));
+        const question = `What has Ambuj done with ${skill}?`;
+        list.push({
+          key: `skill:${skill}`,
+          kind: "skill",
+          title: skill,
+          sub: category,
+          keywords: `skill ${category}`,
+          icon: <Tile icon="i-ph:code-bold" color="#5e5ce6" size={22} />,
+          run: done(() => askSiri(question)),
+          hint: "Ask Siri",
+          preview: () => (
+            <div className="sl-pv-center">
+              <Tile icon="i-ph:code-bold" color="#5e5ce6" size={72} />
+              <div className="sl-pv-title">{skill}</div>
+              <div className="sl-pv-kind">{category}</div>
+              {usedIn.length > 0 && (
+                <p className="sl-pv-text">
+                  Used in {usedIn.map((p) => p.name).join(", ")}.
+                </p>
+              )}
+              <div className="sl-pv-meta">↩ Ask Siri: “{question}”</div>
+            </div>
+          )
+        });
+      }
+    }
+
+    // Settings panes
+    for (const pane of PANE_GROUPS.flat()) {
+      list.push({
+        key: `setting:${pane.id}`,
+        kind: "setting",
+        title: pane.label,
+        sub: "System Settings",
+        keywords: `settings ${pane.keywords}`,
+        icon: <Tile icon={pane.icon} color={pane.color} size={22} />,
+        run: done(() => openSettings(pane.id)),
+        hint: "Open",
+        preview: () => (
+          <div className="sl-pv-center">
+            <Tile icon={pane.icon} color={pane.color} size={72} />
+            <div className="sl-pv-title">{pane.label}</div>
+            <div className="sl-pv-kind">System Settings</div>
+            <p className="sl-pv-text" style={{ textTransform: "capitalize" }}>
+              {pane.keywords.split(" ").slice(0, 6).join(", ")}
+            </p>
+          </div>
+        )
+      });
+    }
+
+    // Certificates
+    for (const c of profile.certifications as Certification[]) {
+      list.push({
+        key: `cert:${c.id}`,
+        kind: "cert",
+        title: c.title,
+        sub: `${c.issuer} · ${c.year}`,
+        keywords: `certificate certification ${c.issuer}`,
+        icon: <Tile icon="i-ph:certificate-fill" color="#ff9500" size={22} />,
+        run: done(() => open(c.file)),
+        hint: "View",
+        preview: () => (
+          <div>
+            <img src={c.preview} alt={`${c.title} certificate`} className="sl-pv-cert" />
+            <div className="sl-pv-title" style={{ fontSize: 15 }}>
+              {c.title}
+            </div>
+            <div className="sl-pv-kind">
+              {c.issuer} · {c.year}
+            </div>
+          </div>
+        )
+      });
+    }
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dark, nightShift, copied, appOpens]);
+
+  // ── Results ────────────────────────────────────────────────────────────────
+  const q = query.trim().toLowerCase();
+  const { top, sections, flat } = useMemo(() => {
+    if (!q) return { top: null, sections: [] as [Kind, Item[]][], flat: [] as Item[] };
+    const scored = items
+      .map((it) => ({ it, base: score(q, it) }))
+      .filter((x) => x.base > 0)
+      // Small tie-breakers: apps first, then the ones this visitor uses most.
+      .map(({ it, base }) => ({ it, s: base + (it.kind === "app" ? 3 : 0) + Math.min(appOpens[it.key.slice(4)] ?? 0, 5) * 0.2 }))
+      .sort((a, b) => b.s - a.s);
+    const topHit = scored[0]?.it ?? null;
+    const groups = new Map<Kind, Item[]>();
+    for (const { it } of scored) {
+      if (it === topHit) continue;
+      const g = groups.get(it.kind) ?? [];
+      if (g.length < 5) g.push(it);
+      groups.set(it.kind, g);
+    }
+    const siri: Item = {
+      key: "siri:ask",
+      kind: "siri",
+      title: `Ask Siri “${query.trim()}”`,
+      icon: <AppImg src="img/icons/siri.png" size={22} />,
+      run: done(() => askSiri(query.trim())),
+      hint: "Ask",
+      preview: () => (
+        <div className="sl-pv-center">
+          <AppImg src="img/icons/siri.png" size={84} />
+          <div className="sl-pv-title">Ask Siri</div>
+          <p className="sl-pv-text">“{query.trim()}”</p>
+          <div className="sl-pv-meta">Siri knows Ambuj's résumé, projects and skills.</div>
+        </div>
+      )
     };
-  };
+    groups.set("siri", [siri]);
+    const secs = ORDER.filter((k) => groups.get(k)?.length).map((k) => [k, groups.get(k)!] as [Kind, Item[]]);
+    return { top: topHit, sections: secs, flat: [...(topHit ? [topHit] : []), ...secs.flatMap(([, g]) => g)] };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, items]);
 
-  const updateAppList = () => {
-    const app = getTypeAppList("app", 0);
-    const portfolio = getTypeAppList("portfolio", app.appIdList.length);
+  useEffect(() => setSel(0), [q]);
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>(`[data-idx="${sel}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [sel]);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(t);
+  }, [copied]);
 
-    const newAppIdList = [...app.appIdList, ...portfolio.appIdList];
-    // don't show app details when there is no associating app
-    if (newAppIdList.length === 0) setCurDetails(null);
+  const current = flat[Math.min(sel, flat.length - 1)];
 
-    const newAppList = (
-      <div>
-        {app.appList.length !== 0 && (
-          <div>
-            <div className="spotlight-type">Applications</div>
-            <ul className="w-full text-xs">{app.appList}</ul>
-          </div>
-        )}
-        {portfolio.appList.length !== 0 && (
-          <div>
-            <div className="spotlight-type mt-1.5 before:(content-empty absolute left-0 top-0 ml-2 w-63.5 border-t border-menu)">
-              Portfolio
-            </div>
-            <ul className="w-full text-xs">{portfolio.appList}</ul>
-          </div>
-        )}
-      </div>
-    );
-
-    setAppIdList(newAppIdList);
-    setAppList(newAppList);
-  };
-
-  const setCurrentDetailsWithType = (app: any, type: string) =>
-    setCurDetails({
-      ...app,
-      type
-    });
-
-  const updateCurrentDetails = () => {
-    if (appIdList.length === 0 || searchText === "") {
-      setCurDetails(null);
-      return;
-    }
-
-    const appId = appIdList[selectedIndex];
-    const element = document.querySelector(`#spotlight-${appId}`) as HTMLElement;
-    const type = element.dataset.appType as string;
-    const app = APPS[type].find((item: LaunchpadData | AppsData) => item.id === appId);
-
-    setCurrentDetailsWithType(app, type);
-  };
-
-  const updateHighlight = (prevIndex: number, curIndex: number) => {
-    if (appIdList.length === 0) return;
-
-    // remove highlight
-    const prevAppId = appIdList[prevIndex];
-    const prev = document.querySelector(`#spotlight-${prevAppId}`) as HTMLElement;
-    prev.className = prev.className
-      .replace(textWhite, textBlack)
-      .replace(textSelected, "bg-transparent");
-
-    // add highlight
-    const curAppId = appIdList[curIndex];
-    const cur = document.querySelector(`#spotlight-${curAppId}`) as HTMLElement;
-    cur.className = cur.className
-      .replace(textBlack, textWhite)
-      .replace("bg-transparent", textSelected);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const keyCode = e.key;
-    const numApps = appIdList.length;
-
-    // ----------- select next app -----------
-    if (keyCode === "ArrowDown" && selectedIndex < numApps - 1) {
-      updateHighlight(selectedIndex, selectedIndex + 1);
-      setSelectedIndex(selectedIndex + 1);
-    }
-    // ----------- select previous app -----------
-    else if (keyCode === "ArrowUp" && selectedIndex > 0) {
-      updateHighlight(selectedIndex, selectedIndex - 1);
-      setSelectedIndex(selectedIndex - 1);
-    }
-    // ----------- launch app -----------
-    else if (keyCode === "Enter") {
-      if (!curDetails) return;
-      launchSelectedApp();
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSel((i) => Math.min(flat.length - 1, i + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSel((i) => Math.max(0, i - 1));
+    } else if (e.key === "Enter" && current) {
+      e.preventDefault();
+      if ((e.metaKey || e.ctrlKey) && current.alt) current.alt.run();
+      else current.run();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (query) setQuery("");
+      else toggleSpotlight();
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // update highlighted line
-    updateHighlight(selectedIndex, 0);
-    // current selected id go back to 0
-    setSelectedIndex(0);
-    // update search text and associating app list
-    setSearchText(e.target.value);
-    setActiveTab("All");
-  };
+  // ── Empty state: suggestions ───────────────────────────────────────────────
+  const suggested = useMemo(() => {
+    const used = Object.entries(appOpens)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+    const ids = [...new Set([...used, ...DEFAULT_SUGGESTED])].filter((id) => apps.some((a) => a.id === id && !a.link));
+    return ids.slice(0, 6).map((id) => apps.find((a) => a.id === id)!);
+  }, [appOpens]);
+  const quick = ["action:resume", "action:message", "action:dark", "action:share"].map((k) => items.find((i) => i.key === k)!);
 
-  const renderAppLibrary = () => {
+  let idx = -1;
+  const renderRow = (it: Item) => {
+    idx++;
+    const i = idx;
     return (
-      <div className="w-full h-full bg-transparent overflow-y-scroll p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6 content-start">
-        {appLibraryCategories.map((cat) => (
-          <div key={cat.name} className="flex flex-col">
-            <span className="text-[13px] text-c-600 font-medium ml-3 mb-1.5">{cat.name}</span>
-            <div className="bg-gray-200/50 dark:bg-gray-800/50 rounded-[24px] p-3.5 grid grid-cols-2 gap-3 backdrop-blur-md shadow-sm">
-              {Array.from({ length: 4 }).map((_, index) => {
-                const appId = cat.apps[index];
-                const app = appId ? apps.find((a) => a.id === appId) : null;
-                if (!app) return <div key={index} className="w-11 h-11" />;
-                return (
-                  <div
-                    key={app.id}
-                    className="flex flex-col items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-                    onClick={() => {
-                      openApp(app.id);
-                      toggleSpotlight();
-                    }}
-                  >
-                    <AppIcon app={app} sizeClass="w-11 h-11" />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderPortfolio = () => {
-    const chunks = [];
-    for (let i = 0; i < launchpadApps.length; i += 4) {
-      chunks.push(launchpadApps.slice(i, i + 4));
-    }
-    const categoryNames = ["Web Apps", "Projects", "More"];
-
-    return (
-      <div className="w-full h-full bg-transparent overflow-y-scroll p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6 content-start">
-        {chunks.map((chunk, chunkIndex) => (
-          <div key={chunkIndex} className="flex flex-col">
-            <span className="text-[13px] text-c-600 font-medium ml-3 mb-1.5">{categoryNames[chunkIndex] || `Category ${chunkIndex + 1}`}</span>
-            <div className="bg-gray-200/50 dark:bg-gray-800/50 rounded-[24px] p-3.5 grid grid-cols-2 gap-3 backdrop-blur-md shadow-sm">
-              {Array.from({ length: 4 }).map((_, index) => {
-                const app = chunk[index];
-                if (!app) return <div key={index} className="w-11 h-11" />;
-                return (
-                  <div
-                    key={app.id}
-                    className="flex flex-col items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-                    onClick={() => {
-                      window.open(app.link);
-                      toggleSpotlight();
-                    }}
-                  >
-                    <AppIcon app={app} sizeClass="w-11 h-11" />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+      <button
+        type="button"
+        key={it.key}
+        data-idx={i}
+        className={`sl-row ${i === sel ? "on" : ""}`}
+        onMouseMove={() => sel !== i && setSel(i)}
+        onClick={it.run}
+      >
+        <span className="sl-row-icon">{it.icon}</span>
+        <span className="sl-row-title">
+          <Highlight text={it.title} q={it.kind === "siri" ? "" : q} />
+        </span>
+        {it.sub && <span className="sl-row-sub">{it.sub}</span>}
+      </button>
     );
   };
 
   return (
-    <div
-      className="spotlight"
-      onKeyDown={handleKeyPress}
-      onClick={() => inputRef.current?.focus()}
-      ref={spotlightRef}
-    >
-      <div
-        className="w-full h-14 sm:h-16 rounded-lg bg-transparent"
-        grid="~ cols-8 sm:cols-11"
-      >
-        <div className="col-start-1 col-span-1 flex-center">
-          <img src="/img/icons/sf-icons/search.svg" alt="Search" className="ml-1 opacity-60 dark:invert" style={{ width: "24px", height: "24px" }} />
-        </div>
+    <div className="sl" ref={rootRef} onKeyDown={onKeyDown} role="dialog" aria-label="Spotlight">
+      <div className="sl-bar">
+        <span className="i-ph:magnifying-glass-bold sl-bar-icon" />
         <input
           ref={inputRef}
-          className={`col-start-2 col-span-7 ${
-            curDetails ? "sm:col-span-9" : "sm:col-span-10"
-          } bg-transparent no-outline px-1`}
-          text="c-black xl sm:2xl"
-          placeholder="Spotlight Search"
-          value={searchText}
-          onChange={handleInputChange}
-          autoFocus={true}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search apps, projects, skills, settings…"
+          aria-label="Spotlight Search"
+          role="combobox"
+          aria-expanded={!!q}
+          aria-controls="sl-results"
+          spellCheck={false}
+          autoComplete="off"
         />
-        {curDetails && (
-          <div className="hidden sm:flex col-start-11 col-span-1 flex-center">
-            <AppIcon app={curDetails} sizeClass="w-8 h-8" />
+        {q && current && <span className="sl-bar-hit">{current.icon}</span>}
+      </div>
+
+      {!q ? (
+        <div className="sl-empty">
+          <div className="sl-label">Suggestions</div>
+          <div className="sl-apps">
+            {suggested.map((a) => (
+              <button type="button" key={a.id} className="sl-app" onClick={done(() => openApp(a.id))} title={a.title}>
+                <AppImg src={a.img} size={48} />
+                <span>{a.title}</span>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-      {/* Category pills */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: 7,
-          padding: "4px 14px 10px",
-          borderBottom: searchText !== "" || activeTab !== "All" ? "1px solid rgba(0,0,0,0.08)" : "none",
-        }}
-      >
-        {["All", "Applications", "Portfolio"].map((label) => (
-          <span
-            key={label}
-            onClick={() => {
-              setActiveTab(label);
-              if (label !== "All") setSearchText("");
-            }}
-            style={{
-              background: activeTab === label ? "rgba(0,122,255,0.1)" : "rgba(120,120,128,0.12)",
-              color: activeTab === label ? "#007aff" : "var(--color-c-600, #555)",
-              borderRadius: 8,
-              padding: "4px 11px",
-              fontSize: 12,
-              fontWeight: 500,
-              cursor: "pointer",
-              userSelect: "none",
-            }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-      {(searchText !== "" || activeTab !== "All") && (
-        <div flex h-85 bg-transparent border="t menu">
-          {activeTab === "Applications" ? (
-            renderAppLibrary()
-          ) : activeTab === "Portfolio" ? (
-            renderPortfolio()
-          ) : (
-            <>
-              <div w="32 sm:72" border="r menu" p="x-2.5" overflow-y-scroll>
-                {appList}
+          <div className="sl-label">Quick actions</div>
+          <div className="sl-quick">
+            {quick.map((it) => (
+              <button type="button" key={it.key} onClick={it.run}>
+                {it.icon}
+                {it.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="sl-body" id="sl-results">
+          <div className="sl-list" ref={listRef} role="listbox">
+            {top && (
+              <>
+                <div className="sl-label">Top Hit</div>
+                {renderRow(top)}
+              </>
+            )}
+            {sections.map(([kind, group]) => (
+              <React.Fragment key={kind}>
+                <div className="sl-label">{SECTION[kind]}</div>
+                {group.map(renderRow)}
+              </React.Fragment>
+            ))}
+          </div>
+          <div className="sl-preview">
+            <div className="sl-preview-body">{current?.preview()}</div>
+            {current && (
+              <div className="sl-foot">
+                <span>
+                  <Kbd>↩</Kbd> {current.hint}
+                </span>
+                {current.alt && (
+                  <span>
+                    <Kbd>⌘↩</Kbd> {current.alt.label}
+                  </span>
+                )}
+                <span style={{ marginLeft: "auto" }}>
+                  <Kbd>↑</Kbd>
+                  <Kbd>↓</Kbd> move
+                </span>
               </div>
-              {curDetails && (
-                <div className="flex-1 vstack">
-                  <div className="w-4/5 h-56" flex="center col" border="b menu">
-                    <AppIcon app={curDetails} sizeClass="w-32 h-32" />
-                    <div m="t-4" text="xl c-black">
-                      {curDetails.title}
-                    </div>
-                    <div text="xs c-500">
-                      {`Version: ${getRandom(0, 99)}.${getRandom(0, 999)}`}
-                    </div>
-                  </div>
-                  <div className="flex-1 hstack text-xs">
-                    <div w="1/2" text="right c-500">
-                      <div>Kind</div>
-                      <div>Size</div>
-                      <div>Created</div>
-                      <div>Modified</div>
-                      <div>Last opened</div>
-                    </div>
-                    <div className="flex-1 pl-2 text-c-black">
-                      <div>{curDetails.type === "app" ? "Application" : "Portfolio"}</div>
-                      <div>{`${getRandom(0, 999)} MB`}</div>
-                      <div>{getRandomDate()}</div>
-                      <div>{getRandomDate()}</div>
-                      <div>{getRandomDate()}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

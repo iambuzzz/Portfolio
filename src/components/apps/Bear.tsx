@@ -224,7 +224,7 @@ const Content = ({ contentID, contentURL }: ContentProps) => {
   }, [contentID, contentURL, fetchMarkdown]);
 
   return (
-    <div className="markdown w-2/3 mx-auto px-2 py-6 text-c-700">
+    <div className="markdown bear-md mx-auto py-6 text-c-700">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[
@@ -265,10 +265,64 @@ const Bear = () => {
       contentID: id,
       contentURL: url
     });
+    setReading(true);
   };
 
+  // Phone / narrow window: one column at a time (list → note), iOS style.
+  const [rootRef, width] = useElementWidth();
+  const narrow = width > 0 && width < 640;
+  const [reading, setReading] = useState(false);
+  const note = state.midbarList[state.curMidbar];
+
+  if (narrow) {
+    return (
+      <div ref={rootRef} className="bear bear-narrow font-avenir">
+        {reading ? (
+          <div className="bear-n-note">
+            <div className="bear-n-bar">
+              <button type="button" className="bear-n-back" onClick={() => setReading(false)}>
+                <span className="i-ph:caret-left-bold" /> Notes
+              </button>
+              {note?.link && (
+                <a className="bear-n-link" href={note.link} target="_blank" rel="noreferrer" aria-label="Open link">
+                  <span className="i-ph:arrow-square-out" />
+                </a>
+              )}
+            </div>
+            <div className="bear-n-scroll">
+              <Content contentID={state.contentID} contentURL={state.contentURL} />
+            </div>
+          </div>
+        ) : (
+          <div className="bear-n-list">
+            <h1 className="bear-n-title">Bear</h1>
+            <div className="bear-n-tabs" role="tablist">
+              {bear.map((b, i) => (
+                <button type="button" role="tab" aria-selected={i === state.curSidebar} key={b.id} className={i === state.curSidebar ? "on" : ""} onClick={() => setMidBar(b.md, i)}>
+                  <span className={b.icon} /> {b.title}
+                </button>
+              ))}
+            </div>
+            <div className="bear-n-notes">
+              {state.midbarList.map((item, i) => (
+                <button type="button" key={item.id} className="bear-n-item" onClick={() => setContent(item.id, item.file ?? "", i)}>
+                  <span className={`bear-n-icon ${item.icon}`} />
+                  <span className="bear-n-text">
+                    <span className="bear-n-name">{item.title}</span>
+                    <span className="bear-n-excerpt">{item.excerpt}</span>
+                  </span>
+                  <span className="i-ph:caret-right bear-n-chev" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="bear font-avenir flex h-full">
+    <div ref={rootRef} className="bear font-avenir flex h-full">
       <div className="w-44 overflow-auto" style={{ background: "var(--lg-bg-tinted)", backdropFilter: "var(--lg-blur-menu)" }}>
         <Sidebar cur={state.curSidebar} setMidBar={setMidBar} />
       </div>

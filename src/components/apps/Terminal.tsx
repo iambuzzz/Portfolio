@@ -153,6 +153,9 @@ export default function Terminal() {
   const rootRef = useRef<HTMLDivElement>(null);
   const focusInput = () => {
     if (window.getSelection()?.toString()) return;
+    // A full-window program (projects -i, snake…) keeps its own focus; taking
+    // it here left the program deaf to keys, with no way to quit.
+    if (program) return rootRef.current?.querySelector<HTMLElement>(".t-program")?.focus();
     if (inputRef.current) inputRef.current.focus();
     else rootRef.current?.focus();
   };
@@ -255,7 +258,11 @@ export default function Terminal() {
       if (!nested) {
         setBusy(false);
         abortRef.current = null;
-        setTimeout(() => inputRef.current?.focus(), 0);
+        // Take focus back only if nothing else (e.g. Spotlight) has it.
+        setTimeout(() => {
+          const a = document.activeElement;
+          if (!a || a === document.body || rootRef.current?.contains(a)) inputRef.current?.focus();
+        }, 0);
       }
     }
   };
@@ -326,7 +333,8 @@ export default function Terminal() {
   // ── keyboard ───────────────────────────────────────────────────────────────
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Keep desktop shortcuts (Cmd+F etc.) out while typing, except Esc/Cmd combos.
-    if (!e.metaKey) e.stopPropagation();
+    // Ctrl+Space (Spotlight) is let through too.
+    if (!e.metaKey && !(e.ctrlKey && e.code === "Space")) e.stopPropagation();
     const k = e.key;
     const ctrl = e.ctrlKey;
 

@@ -20,7 +20,7 @@ const websites: WebsitesData = {
     sites: profile.projects.map((p) => ({
       id: `site-${p.id}`,
       title: p.name,
-      img: `img/icons/projects/${p.id}.svg`,
+      img: p.logo,
       link: p.live
     }))
   }

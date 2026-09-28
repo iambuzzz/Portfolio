@@ -8,12 +8,17 @@ import AppErrorBoundary from "~/components/AppErrorBoundary";
 import type { MacActions } from "~/types";
 import DynamicIsland from "~/components/DynamicIsland";
 import NotificationCenter from "~/components/NotificationCenter";
-import AboutThisMacModal from "~/components/AboutThisMacModal";
+import { AboutThisMacModal, ForceQuitDialog, PowerConfirm, type PowerAction } from "~/components/SystemDialogs";
+import type { SystemCommand } from "~/components/menus/AppleMenu";
+import { useMusicStore } from "~/stores/music";
 import DesktopWidgets from "~/components/widgets/DesktopWidgets";
 import ContextMenu from "~/components/menus/ContextMenu";
 import { FolderIcon, FolderHomeIcon, FolderDockIcon, PdfIcon } from "~/components/DesktopIcons";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWindowSize } from "~/hooks";
+import { initialPrefs } from "~/settings/prefs";
+import { useActivity } from "~/settings/activity";
+import { AchievementToasts } from "~/settings/Effects";
 
 interface DesktopState {
   showApps: { [key: string]: boolean };
@@ -33,8 +38,10 @@ function buildInitialState(): Pick<DesktopState, "showApps" | "appsZ" | "maxApps
   const appsZ: { [key: string]: number } = {};
   const maxApps: { [key: string]: boolean } = {};
   const minApps: { [key: string]: boolean } = {};
+  // Settings › General › Open at startup (default: About Me).
+  const startup = initialPrefs().startupApp;
   apps.forEach((app) => {
-    showApps[app.id] = !!app.show;
+    showApps[app.id] = startup === "about" ? !!app.show : app.id === startup;
     appsZ[app.id] = 2;
     maxApps[app.id] = false;
     minApps[app.id] = false;
@@ -43,6 +50,7 @@ function buildInitialState(): Pick<DesktopState, "showApps" | "appsZ" | "maxApps
 }
 
 const INITIAL = buildInitialState();
+const TRACKED_APPS = apps.filter((a) => a.desktop && a.id !== "siri").length;
 
 export default function Desktop(props: MacActions) {
   const [state, setState] = useState<DesktopState>({
@@ -57,6 +65,30 @@ export default function Desktop(props: MacActions) {
   const [spotlightBtnRef, setSpotlightBtnRef] =
     useState<React.RefObject<HTMLDivElement> | null>(null);
   const [showAboutMac, setShowAboutMac] = useState(false);
+  const [showForceQuit, setShowForceQuit] = useState(false);
+  const [power, setPower] = useState<PowerAction | null>(null);
+  const cancelPower = useCallback(() => setPower(null), []);
+  const confirmPower = useCallback(
+    (a: PowerAction) => {
+      setPower(null);
+      useMusicStore.getState().stop();
+      if (a === "restart") window.dispatchEvent(new Event("system:restart"));
+      else props.setLogin(false);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  // Apple menu › Force Quit / Log Out / Restart (Lock and Sleep live in index.tsx).
+  useEffect(() => {
+    const onCommand = (e: Event) => {
+      const cmd = (e as CustomEvent<SystemCommand>).detail;
+      if (cmd === "forcequit") setShowForceQuit(true);
+      else if (cmd === "logout" || cmd === "restart") setPower(cmd);
+    };
+    window.addEventListener("system:command", onCommand);
+    return () => window.removeEventListener("system:command", onCommand);
+  }, []);
 
   const { dark, brightness } = useStore(useShallow((s) => ({
     dark: s.dark,
@@ -196,6 +228,7 @@ export default function Desktop(props: MacActions) {
       console.warn(`openApp: unknown app id "${id}"`);
       return;
     }
+    if (!state.showApps[id]) useActivity.getState().recordAppOpen(id, TRACKED_APPS);
 
     setState((prev) => {
       const maxZ = prev.maxZ + 1;
@@ -327,6 +360,8 @@ export default function Desktop(props: MacActions) {
         openAboutMac={() => setShowAboutMac(true)}
       />
 
+      <AchievementToasts />
+
       {/* Dynamic Island */}
       <DynamicIsland hide={hideDockAndTopbar || state.showLaunchpad} />
 
@@ -379,7 +414,14 @@ export default function Desktop(props: MacActions) {
       </div>
 
       {/* About This Mac modal */}
-      <AboutThisMacModal show={showAboutMac} onClose={() => setShowAboutMac(false)} />
+      <AboutThisMacModal show={showAboutMac} onClose={() => setShowAboutMac(false)} openApp={openApp} />
+      <ForceQuitDialog
+        show={showForceQuit}
+        onClose={() => setShowForceQuit(false)}
+        openIds={Object.keys(state.showApps).filter((id) => state.showApps[id])}
+        quit={closeApp}
+      />
+      <PowerConfirm action={power} onCancel={cancelPower} onConfirm={confirmPower} />
 
       {/* Spotlight */}
       {state.spotlight && (

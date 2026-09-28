@@ -3,6 +3,8 @@ import Webcam from "react-webcam";
 import { format } from "date-fns";
 import { useStore } from "~/stores";
 import { motion } from "framer-motion";
+import { unlock } from "~/settings/activity";
+import { useLayerActive } from "~/components/mobile/layerActive";
 
 interface SidebarProps {
   state: FaceTimeState;
@@ -202,6 +204,8 @@ const Sidebar = ({ state, onTake, onSave, onSelect, onDelete }: SidebarProps) =>
 
 const FaceTime = () => {
   const webcamRef = useRef<Webcam>(null);
+  // Phone: turn the camera off while FaceTime waits in the app switcher.
+  const active = useLayerActive();
   const addImage = useStore((state) => state.addFaceTimeImage);
   const deleteImage = useStore((state) => state.delFaceTimeImage);
   const images = useStore((state) => state.faceTimeImages);
@@ -210,28 +214,80 @@ const FaceTime = () => {
     curImage: null
   });
 
+  const take = () => {
+    if (!state.curImage) {
+      const src = webcamRef.current?.getScreenshot() || "";
+      if (src) unlock("cheese");
+      setState({ curImage: src, canSave: true });
+    } else setState({ curImage: null, canSave: false });
+  };
+  const save = () => {
+    addImage(state.curImage!);
+    setState({ curImage: null, canSave: false });
+  };
+  const remove = (date: string) => {
+    // Deleting the photo on screen goes back to the camera.
+    if (state.curImage === images[date]) setState({ curImage: null, canSave: false });
+    deleteImage(date);
+  };
+
+  // Phone / narrow window: full-screen camera with iPhone Camera controls.
+  const [rootRef, width] = useElementWidth();
+  const narrow = width > 0 && width < 768;
+  const [showRoll, setShowRoll] = useState(false);
+  const saved = Object.keys(images).reverse();
+  const viewingDate = saved.find((d) => images[d] === state.curImage && !state.canSave);
+
+  if (narrow) {
+    return (
+      <div ref={rootRef} className="ft-narrow">
+        {!state.curImage ? (
+          active && <Webcam mirrored audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="ft-view" videoConstraints={{ facingMode: "user" }} />
+        ) : (
+          <img src={state.curImage} alt="Your photo" className="ft-view" />
+        )}
+        {showRoll && saved.length > 0 && (
+          <div className="ft-roll" role="list" aria-label="Saved photos">
+            {saved.map((d) => (
+              <button type="button" role="listitem" key={d} className={state.curImage === images[d] ? "on" : ""} onClick={() => setState({ curImage: images[d], canSave: false })}>
+                <img src={images[d]} alt={`Saved ${d}`} />
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="ft-controls">
+          <button type="button" className="ft-thumb" aria-label="Saved photos" disabled={!saved.length} onClick={() => setShowRoll((v) => !v)}>
+            {saved.length ? <img src={images[saved[0]]} alt="" /> : <span className="i-ph:images" />}
+          </button>
+          <button type="button" className={`ft-shutter ${state.curImage ? "retake" : ""}`} aria-label={state.curImage ? "Back to camera" : "Take a picture"} onClick={take}>
+            {state.curImage && <span className="i-ph:camera-bold" />}
+          </button>
+          {state.canSave ? (
+            <button type="button" className="ft-side" onClick={save}>
+              <span className="i-ph:download-simple-bold" /> Save
+            </button>
+          ) : viewingDate ? (
+            <button type="button" className="ft-side danger" onClick={() => remove(viewingDate)}>
+              <span className="i-ph:trash-bold" /> Delete
+            </button>
+          ) : (
+            <span className="ft-side placeholder" />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ position: "relative", height: "100%", width: "100%", backgroundColor: "#000", }}>
+    <div ref={rootRef} style={{ position: "relative", height: "100%", width: "100%", backgroundColor: "#000", }}>
       <Sidebar
         state={state}
-        onTake={() => {
-          if (!state.curImage) {
-            const src = webcamRef.current?.getScreenshot() || "";
-            setState({ curImage: src, canSave: true });
-          } else setState({ curImage: null, canSave: false });
-        }}
-        onSave={() => {
-          addImage(state.curImage!);
-          setState({ curImage: null, canSave: false });
-        }}
+        onTake={take}
+        onSave={save}
         onSelect={(src) => {
           setState({ curImage: src, canSave: false });
         }}
-        onDelete={(date) => {
-          // Deleting the photo on screen goes back to the camera.
-          if (state.curImage === images[date]) setState({ curImage: null, canSave: false });
-          deleteImage(date);
-        }}
+        onDelete={remove}
       />
 
       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>

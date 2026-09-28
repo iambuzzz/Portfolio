@@ -155,7 +155,7 @@ ${p.tagline}
 ## Highlights
 
 ${p.highlights.map((h) => `- ${h}`).join("\n")}
-${p.screenshots.length ? `\n## Screenshots\n\n${p.screenshots.map((s) => `![${p.name}](${s})`).join("\n\n")}\n` : ""}`
+${p.screenshots.length ? `\n## Screenshots\n\n${p.screenshots.map((s) => `![${p.name}: ${s.caption}](${s.src})\n*${s.caption}*`).join("\n\n")}\n` : ""}`
     }))
   }
 ];

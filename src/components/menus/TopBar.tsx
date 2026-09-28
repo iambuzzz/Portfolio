@@ -141,24 +141,9 @@ const TopBar = (props: TopBarProps) => {
     });
   };
 
-  const logout = (): void => {
-    controls.pause();
-    props.setLogin(false);
-  };
-
   const shut = (e: React.MouseEvent<HTMLLIElement>): void => {
     controls.pause();
     props.shutMac(e);
-  };
-
-  const restart = (e: React.MouseEvent<HTMLLIElement>): void => {
-    controls.pause();
-    props.restartMac(e);
-  };
-
-  const sleep = (e: React.MouseEvent<HTMLLIElement>): void => {
-    controls.pause();
-    props.sleepMac(e);
   };
 
   return (
@@ -204,10 +189,7 @@ const TopBar = (props: TopBarProps) => {
       {/* Open this when clicking on Apple logo */}
       {state.showAppleMenu && (
         <AppleMenu
-          logout={logout}
           shut={shut}
-          restart={restart}
-          sleep={sleep}
           toggleAppleMenu={toggleAppleMenu}
           openApp={props.openApp}
           openAboutMac={props.openAboutMac}

@@ -131,12 +131,27 @@ const Window = (props: WindowProps) => {
     ),
   }));
 
+  // Browser resized: x is measured from a bound that starts one viewport-width
+  // to the left, so shift by the width change to keep the window where it was
+  // on screen (it used to slide sideways), then pull it back inside if the
+  // viewport got too small for it.
+  const prevWin = useRef({ w: winWidth, h: winHeight });
   useEffect(() => {
+    const delta = winWidth - prevWin.current.w;
+    const resized = delta !== 0 || winHeight !== prevWin.current.h;
+    prevWin.current = { w: winWidth, h: winHeight };
+    if (!resized) return;
     setState((prev) => {
       const width = Math.min(winWidth, prev.width);
-      return { ...prev, width, height: Math.min(winHeight, prev.height), ...clamp(prev.x, prev.y, width) };
+      const height = Math.min(winHeight, prev.height);
+      let screenX = prev.x + delta - winWidth;
+      if (screenX + width > winWidth) screenX = Math.max(0, winWidth - width);
+      let y = prev.y;
+      const bottomLimit = winHeight - minMarginY - (dockSize + 15);
+      if (y + height > bottomLimit) y = Math.max(0, bottomLimit - height);
+      return { ...prev, width, height, ...clamp(screenX + winWidth, y, width) };
     });
-  }, [winWidth, winHeight, clamp]);
+  }, [winWidth, winHeight, clamp, dockSize]);
 
   const isMobile = winWidth < 768;
   const round = (props.max || isMobile) ? "rounded-none" : "";

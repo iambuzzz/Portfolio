@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { profile } from "~/data/profile";
+import { profile, thumbOf } from "~/data/profile";
 
 // A single scrolling profile page ("contact card"). It's the first thing a
 // recruiter sees, on desktop and especially on phones.
@@ -50,19 +50,41 @@ const ActionButton = ({ href, icon, label, download, primary }: { href: string; 
 
 function ProjectCard({ project, index }: { project: (typeof profile.projects)[number]; index: number }) {
   const [open, setOpen] = useState(false);
+  const [shot, setShot] = useState(0);
+  const current = project.screenshots[shot];
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }}>
       <Card style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        {project.screenshots[0] && (
-          <img
-            src={project.screenshots[0]}
-            alt={`${project.name} screenshot`}
-            loading="lazy"
-            style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: 10, marginBottom: 12 }}
-          />
+        {current && (
+          <div style={{ marginBottom: 12 }}>
+            <a href={current.src} target="_blank" rel="noreferrer" title="Open full size">
+              <img
+                src={current.src}
+                alt={`${project.name}: ${current.caption}`}
+                loading="lazy"
+                style={{ display: "block", width: "100%", aspectRatio: "16 / 9", objectFit: "cover", objectPosition: "top", borderRadius: 10, border: "0.5px solid var(--a-border, rgba(0,0,0,0.1))" }}
+              />
+            </a>
+            <div style={{ fontSize: 11.5, color: "var(--a-text-2)", margin: "6px 2px" }}>{current.caption}</div>
+            <div className="flex" style={{ gap: 6, overflowX: "auto" }} role="tablist" aria-label={`${project.name} screenshots`}>
+              {project.screenshots.map((s, i) => (
+                <button
+                  key={s.src}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === shot}
+                  title={s.caption}
+                  onClick={() => setShot(i)}
+                  style={{ flexShrink: 0, padding: 0, borderRadius: 6, overflow: "hidden", outline: i === shot ? "2px solid #007AFF" : "none", outlineOffset: 1, opacity: i === shot ? 1 : 0.65 }}
+                >
+                  <img src={thumbOf(s.src)} alt="" loading="lazy" style={{ display: "block", width: 52, height: 30, objectFit: "cover", objectPosition: "top" }} />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         <div className="flex items-center" style={{ gap: 10 }}>
-          <img src={`/img/icons/projects/${project.id}.svg`} alt="" style={{ width: 36, height: 36 }} />
+          <img src={project.logo} alt="" style={{ width: 36, height: 36, borderRadius: 8 }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--a-text)" }}>{project.name}</div>
             <div style={{ fontSize: 12, color: "var(--a-text-2)" }}>{project.date}</div>

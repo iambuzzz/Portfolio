@@ -3,7 +3,7 @@ import { profile } from "~/data/profile";
 // Live GitHub stats (public API, no token). Cached for an hour per visitor so
 // we stay well inside GitHub's 60 requests/hour unauthenticated limit.
 
-interface GhData {
+export interface GhData {
   avatar: string;
   repos: number;
   followers: number;
@@ -13,7 +13,7 @@ interface GhData {
 const CACHE_KEY = "gh-widget-v1";
 const TTL = 60 * 60 * 1000;
 
-async function loadGitHub(user: string): Promise<GhData | null> {
+export async function loadGitHub(user: string): Promise<GhData | null> {
   try {
     const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null");
     if (cached && Date.now() - cached.at < TTL) return cached.data;

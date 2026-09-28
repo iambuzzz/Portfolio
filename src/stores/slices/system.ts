@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import { enterFullScreen, exitFullScreen } from "~/utils";
+import { unlock } from "~/settings/activity";
 
 export type AppearanceMode = "auto" | "light" | "dark";
 export type IconStyle = "default" | "dark" | "clear" | "tinted";
@@ -49,8 +50,9 @@ const saveSetting = (key: string, value: unknown) => {
 };
 
 // Resolve whether the dark class should be applied for a given appearance mode.
-// "auto" resolves to light by default (no system-preference hook in this env).
-const resolveDark = (mode: AppearanceMode): boolean => mode === "dark";
+// "auto" follows the OS (kept live by settings/Effects).
+const resolveDark = (mode: AppearanceMode): boolean =>
+  mode === "dark" || (mode === "auto" && typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches);
 
 const applyDarkClass = (dark: boolean) => {
   if (dark) document.documentElement.classList.add("dark");
@@ -76,6 +78,7 @@ export const createSystemSlice: StateCreator<SystemSlice> = (set) => ({
   toggleDark: () =>
     set((state) => {
       const next = !state.dark;
+      if (next) unlock("night");
       applyDarkClass(next);
       const mode: AppearanceMode = next ? "dark" : "light";
       saveSetting("appearanceMode", mode);
@@ -96,6 +99,7 @@ export const createSystemSlice: StateCreator<SystemSlice> = (set) => ({
   setAppearanceMode: (v) =>
     set(() => {
       const dark = resolveDark(v);
+      if (dark) unlock("night");
       applyDarkClass(dark);
       saveSetting("appearanceMode", v);
       return { appearanceMode: v, dark };

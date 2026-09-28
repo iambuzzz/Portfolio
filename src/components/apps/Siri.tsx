@@ -8,6 +8,9 @@ import { localAnswer } from "~/data/siriLocal";
 import { useMusicStore } from "~/stores/music";
 import { searchSongs } from "~/utils/saavn";
 import { toPlainText } from "~/utils/text";
+import { usePrefs } from "~/settings/prefs";
+import { takeSiriQuestion } from "~/utils/siriBridge";
+import { unlock } from "~/settings/activity";
 
 type SiriPhase = "idle" | "recording" | "processing" | "speaking" | "error";
 
@@ -23,6 +26,11 @@ const toSpeech = (text: string) =>
 
 // Chrome stops long utterances after ~15s, so speak sentence by sentence.
 // Split only where punctuation is followed by a space, so "Next.js" stays whole.
+// Actions (open an app, play a song, toggle Wi-Fi…) are just done, silently;
+// the result stays on screen. Only real answers are spoken.
+const SPOKEN_TOOLS = new Set(["get_current_time"]);
+const isSilent = (tools: string[]) => tools.length > 0 && tools.every((t) => !SPOKEN_TOOLS.has(t));
+
 const toSentences = (text: string) => text.split(/(?<=[.!?])\s+/).map((t) => t.trim()).filter(Boolean);
 
 //  Check browser SpeechRecognition support 
@@ -31,7 +39,13 @@ const SpeechRecognitionAPI =
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     : null;
 
-export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
+// Browsers only allow the microphone on https (or localhost), and never ask on plain http.
+const micDeniedText = () =>
+  window.isSecureContext
+    ? "Microphone access denied — allow it in your browser's site settings, or type your question below."
+    : "The microphone needs a secure (https) connection. Type your question below.";
+
+export default function Siri({ closeSiri, mobile }: { closeSiri?: () => void; mobile?: boolean }) {
   const [phase, setPhase] = useState<SiriPhase>("idle");
   const [responseText, setResponseText] = useState("");
   const [inputText, setInputText] = useState("");
@@ -61,6 +75,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   //  Play siri.mp3 activation sound 
   const playSiriSound = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
+      // Settings › Sound › UI sound effects
+      if (!usePrefs.getState().uiSounds) return resolve();
       const siriAudio = document.getElementById("siri-audio") as HTMLAudioElement | null;
       if (siriAudio) {
         siriAudio.volume = 0.8;
@@ -125,7 +141,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
             if (!tracks.length) return `I couldn't find "${query}".`;
             useMusicStore.getState().playQueue(tracks, 0);
             openAppById("spotify");
-            return `Playing ${tracks[0].title} by ${tracks[0].artist}.`;
+            return `Playing ${tracks[0].title} by ${tracks[0].artist.split(", ").slice(0, 2).join(" and ")}.`;
           } catch {
             return "The music service isn't responding right now.";
           }
@@ -191,6 +207,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       }
 
       case "download_resume":
+        unlock("resume");
         downloadResume();
         return `Here's ${profile.firstName}'s résumé — the download should start right away!`;
 
@@ -249,11 +266,14 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     window.speechSynthesis.cancel();
     const id = ++speechIdRef.current;
     const parts = toSentences(toSpeech(text));
-    if (!text || !parts.length) { setPhase("idle"); return; }
+    // Settings › Siri › Speak replies aloud
+    const prefs = usePrefs.getState();
+    if (!text || !parts.length || !prefs.siriVoice) { setPhase("idle"); return; }
     setPhase("speaking");
 
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
+    const voice = voices.find((v) => v.name === prefs.siriVoiceName)
+      || voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
       || voices.find((v) => v.lang.startsWith("en-US"))
       || voices.find((v) => v.lang.startsWith("en"))
       || voices[0];
@@ -264,7 +284,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     parts.forEach((part, i) => {
       const utt = new SpeechSynthesisUtterance(part);
       if (voice) utt.voice = voice;
-      utt.rate = 1.0;
+      utt.rate = prefs.siriRate;
       utt.pitch = 1.1;
       if (i === parts.length - 1) utt.onend = done;
       utt.onerror = done;
@@ -278,19 +298,27 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
     if (closeSiri) closeSiri(); else closeAppById("siri");
   }, [cancelListening, stopSpeaking, closeSiri, closeAppById]);
 
-  // Never keep talking after Siri is closed; Esc closes.
+  // Esc closes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [close]);
+
+  // Never keep talking after Siri is closed. Unmount only: `close` changes
+  // whenever the desktop re-renders (e.g. Siri opening an app), and cancelling
+  // then cut the reply off and left Siri stuck on "Stop".
+  useEffect(
+    () => () => {
       speechIdRef.current++;
       window.speechSynthesis.cancel();
-    };
-  }, [close]);
+    },
+    []
+  );
 
   //  Groq LLM Agent 
   const executeAgent = useCallback(async (userText: string) => {
+    unlock("siri");
     try {
       // The system prompt and tools are added server-side (api/siri/chat.ts).
       const data = await getGroqChatCompletion(userText);
@@ -339,7 +367,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
       reply = toPlainText(reply) || SIRI_FALLBACK;
       setResponseText(reply);
-      speakText(reply);
+      if (isSilent(toolCalls.map((tc: any) => tc.function.name))) setPhase("idle");
+      else speakText(reply);
     } catch {
       // AI unavailable (no key, rate limit, offline): answer locally.
       const local = localAnswer(userText);
@@ -349,7 +378,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         msg = local.reply || toolResult;
       }
       setResponseText(msg);
-      speakText(msg);
+      if (local?.tool && isSilent([local.tool.name])) setPhase("idle");
+      else speakText(msg);
     }
   }, [executeTool, speakText]);
 
@@ -414,7 +444,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
         setUseBrowserSTT(false);
         setResponseText("Tap Siri again to talk, or type your question below.");
       } else if (event.error === "not-allowed") {
-        setResponseText("Microphone access denied — you can type your question below.");
+        setResponseText(micDeniedText());
       } else {
         setResponseText("Speech recognition error. Please try again.");
       }
@@ -538,7 +568,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       // console.log("[Whisper]  Recording...");
     } catch {
       if (!live()) return;
-      setResponseText("Microphone access denied — you can type your question below.");
+      setResponseText(micDeniedText());
       setPhase("error");
     }
   }, [handleTranscription]);
@@ -564,9 +594,21 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   // Start listening when Siri opens. Deferred and cancelled in cleanup, so a
   // StrictMode (dev) unmount/remount can't leave it stuck on "Listening…".
   useEffect(() => {
-    const t = setTimeout(() => handleClickRef.current(), 0);
+    // Settings › Siri › Start listening when Siri opens
+    const t = setTimeout(() => {
+      // Opened from Spotlight with a question: answer it instead of listening.
+      const q = takeSiriQuestion();
+      if (q) handleTextRef.current(q);
+      else if (usePrefs.getState().siriAutoListen) handleClickRef.current();
+    }, 0);
+    const onAsk = () => {
+      const q = takeSiriQuestion();
+      if (q) handleTextRef.current(q);
+    };
+    window.addEventListener("siri:ask", onAsk);
     return () => {
       clearTimeout(t);
+      window.removeEventListener("siri:ask", onAsk);
       cancelListening();
     };
   }, [cancelListening]);
@@ -599,6 +641,8 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
 
   const handleClickRef = useRef(handleClick);
   handleClickRef.current = handleClick;
+  const handleTextRef = useRef(handleTextInput);
+  handleTextRef.current = handleTextInput;
 
   //  Display 
   let statusText = "";
@@ -616,7 +660,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
   const isAuraActive = phase === "speaking" || phase === "processing" || phase === "recording";
 
   return (
-    <div className="flex items-start justify-end gap-4 relative pointer-events-auto group mt-4 mr-4">
+    <div className={mobile ? "flex flex-col items-center gap-1 relative pointer-events-auto w-full" : "flex items-start justify-end gap-4 relative pointer-events-auto group mt-4 mr-4"}>
       <audio id="siri-audio" src="/music/siri.mp3" preload="auto" className="hidden" />
       <style>{`
         @keyframes siri-aura-pulse {
@@ -639,11 +683,14 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
         }
+        /* Phones often skip the blur: keep the panel readable over busy screens. */
+        .m-siri .siri-glass-panel { background: rgba(250, 250, 252, 0.88); }
+        .dark .m-siri .siri-glass-panel { background: rgba(30, 30, 32, 0.9); }
       `}</style>
 
       {/* Box Text (Siri's Response as a Large Glass Panel) */}
       <div
-        className={`siri-glass-panel relative z-20 flex flex-col justify-center px-6 py-5 w-[320px] min-h-[120px] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${boxText || statusText ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
+        className={`siri-glass-panel relative z-20 flex flex-col justify-center px-6 py-5 ${mobile ? "w-full" : "w-[320px]"} min-h-[120px] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${boxText || statusText ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
           }`}
       >
         {/* Header: title, Stop (while speaking) and the one Close button */}
@@ -712,7 +759,7 @@ export default function Siri({ closeSiri }: { closeSiri?: () => void }) {
       </div>
 
       {/* The Orb Container */}
-      <div className="relative w-[180px] h-[180px] flex items-center justify-center flex-shrink-0">
+      <div className={`relative ${mobile ? "w-[120px] h-[120px] -mb-2" : "w-[180px] h-[180px]"} flex items-center justify-center flex-shrink-0`}>
 
         {/* Environmental FX Aura underneath the orb */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none z-0">

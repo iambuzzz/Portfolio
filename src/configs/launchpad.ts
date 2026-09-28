@@ -1,11 +1,11 @@
 import type { LaunchpadData } from "~/types";
 import { profile } from "~/data/profile";
 
-// Projects open in Safari. Icons are placeholders until real ones are supplied.
+// Projects open in Safari.
 const launchpadApps: LaunchpadData[] = profile.projects.map((p) => ({
   id: p.id,
   title: p.name,
-  img: `img/icons/projects/${p.id}.svg`,
+  img: p.logo,
   link: p.live
 }));
 

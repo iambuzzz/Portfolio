@@ -18,6 +18,7 @@ import Htop from "./programs/Htop";
 import Snake from "./programs/Snake";
 import TypingTest from "./programs/TypingTest";
 import { KernelPanic, Matrix, Sl } from "./programs/Effects";
+import { unlock } from "~/settings/activity";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const projectIds = profile.projects.map((p) => p.id);
@@ -27,6 +28,12 @@ const fmtTime = (s: number) => (s && isFinite(s) ? `${Math.floor(s / 60)}:${Stri
 const typeOut = (ctx: Ctx, t: string, speed?: number) =>
   new Promise<void>((resolve) => ctx.print(<Typewriter text={t} speed={speed} signal={ctx.signal} onDone={resolve} />));
 const err = (msg: ReactNode) => <C c="red">{msg}</C>;
+
+// Full-screen programs driven by arrow keys / typing: a phone has no way to
+// play (or even quit) them, so they stay laptop-only.
+const noKeyboard = () => window.matchMedia?.("(pointer: coarse)").matches || window.innerWidth < 768;
+const keyboardOnly = (name: string, ctx: Ctx) =>
+  ctx.print(<C c="yellow">{name} needs a physical keyboard. Try it on a laptop!</C>);
 const hash = (s: string) => {
   let h = 2166136261;
   for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
@@ -332,6 +339,7 @@ const list: Command[] = [
     usage: "projects [-i | <name>]",
     complete: () => ["-i", ...projectIds],
     run: async ([arg], ctx) => {
+      if ((arg === "-i" || arg === "--interactive") && noKeyboard()) arg = "";
       if (arg === "-i" || arg === "--interactive") return ctx.takeover((exit) => <ProjectsTui exit={exit} />);
       if (arg) {
         const p = profile.projects.find((x) => x.id === arg.toLowerCase() || x.name.toLowerCase() === arg.toLowerCase());
@@ -440,6 +448,7 @@ const list: Command[] = [
       a.href = profile.resume;
       a.download = profile.resumeFileName;
       a.click();
+      unlock("resume");
       ctx.print(
         <span>
           <C c="green">↓</C> Downloading {profile.resumeFileName}… (or <A href={profile.resume}>open it</A>)
@@ -541,6 +550,7 @@ const list: Command[] = [
       }
       ctx.print(<C c="muted">Sending…</C>);
       const sent = await sendContactMessage(m);
+      if (sent) unlock("mail");
       ctx.print(
         sent ? (
           <C c="green">✔ Sent! Ambuj will reply to {m.email}.</C>
@@ -585,6 +595,7 @@ const list: Command[] = [
           ctx.print(<C c="green">✔ correct</C>);
         } else ctx.print(<C c="red">✘ it's {q.options[q.answer]}</C>);
       }
+      if (score === 5) unlock("superfan");
       ctx.print(
         <C c={score >= 4 ? "green" : "yellow"} b>
           Score: {score}/5 {score === 5 ? "— you should probably hire Ambuj 😄" : score >= 3 ? "— nice!" : "— check out `about` and try again!"}
@@ -592,7 +603,7 @@ const list: Command[] = [
       );
     }
   },
-  { name: "htop", aliases: ["top", "btop"], group: "Interactive", summary: "skills as running processes", run: (_, ctx) => ctx.takeover((exit) => <Htop exit={exit} />) },
+  { name: "htop", aliases: ["top", "btop"], group: "Interactive", summary: "skills as running processes", run: (_, ctx) => (noKeyboard() ? keyboardOnly("htop", ctx) : ctx.takeover((exit) => <Htop exit={exit} />)) },
 
   // Music
   {
@@ -706,6 +717,7 @@ const list: Command[] = [
             cat: {p}: binary file — try <Run cmd={`open ${p}`} />
           </span>
         );
+      if (r.node.name === ".secrets") unlock("secrets");
       ctx.print(<Pre>{r.node.content}</Pre>);
     }
   },
@@ -838,9 +850,9 @@ const list: Command[] = [
   { name: "exit", aliases: ["quit", "logout"], group: "Files & system", summary: "close the terminal", run: (_, ctx) => ctx.closeTerminal() },
 
   // Fun & games
-  { name: "snake", group: "Fun & games", summary: "classic snake", run: (_, ctx) => ctx.takeover((exit) => <Snake exit={exit} />) },
-  { name: "typing-test", aliases: ["typing", "wpm"], group: "Fun & games", summary: "30s WPM test (tech-stack words)", run: (_, ctx) => ctx.takeover((exit) => <TypingTest exit={exit} />) },
-  { name: "matrix", aliases: ["hack", "cmatrix"], group: "Fun & games", summary: "enter the Matrix", run: (_, ctx) => ctx.takeover((exit) => <Matrix exit={() => exit()} />) },
+  { name: "snake", group: "Fun & games", summary: "classic snake", run: (_, ctx) => (noKeyboard() ? keyboardOnly("snake", ctx) : ctx.takeover((exit) => <Snake exit={exit} />)) },
+  { name: "typing-test", aliases: ["typing", "wpm"], group: "Fun & games", summary: "30s WPM test (tech-stack words)", run: (_, ctx) => (noKeyboard() ? keyboardOnly("typing-test", ctx) : ctx.takeover((exit) => <TypingTest exit={exit} />)) },
+  { name: "matrix", aliases: ["hack", "cmatrix"], group: "Fun & games", summary: "enter the Matrix", run: (_, ctx) => (unlock("neo"), ctx.takeover((exit) => <Matrix exit={() => exit()} />)) },
   { name: "sl", group: "Fun & games", summary: "you meant ls, right?", run: (_, ctx) => ctx.takeover((exit) => <Sl exit={() => exit()} />) },
   {
     name: "cowsay",
@@ -923,6 +935,7 @@ const list: Command[] = [
           );
         }
         await step("Setting up ambuj-jaiswal ... done", 400);
+        unlock("root");
         ctx.print(
           <Block>
             <C c="green" b>
@@ -964,6 +977,7 @@ const list: Command[] = [
           await sleep(90, ctx.signal);
         }
         await sleep(500, ctx.signal);
+        unlock("chaos");
         ctx.print(<KernelPanic />);
       } catch {
         ctx.print(<C c="yellow">Phew. Cancelled just in time.</C>);

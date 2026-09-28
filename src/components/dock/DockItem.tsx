@@ -192,6 +192,7 @@ export default function DockItem({
       />
       {/* Open indicator dot with pulse */}
       <motion.div
+        className="dock-dot"
         animate={isOpen ? { scale: [1, 1.5, 1], opacity: [0.85, 1, 0.85] } : { scale: 0, opacity: 0 }}
         transition={isOpen ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.15 }}
         style={{

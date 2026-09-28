@@ -33,9 +33,7 @@ const APP_ALIASES: Record<string, string> = {
   code: "vscode",
   facetime: "facetime",
   camera: "facetime",
-  typora: "typora",
   clock: "clock",
-  "app store": "app-store",
   bear: "bear"
 };
 

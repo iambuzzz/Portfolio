@@ -1,13 +1,11 @@
 import { lazy } from "react";
 import { appBarHeight } from "~/utils";
 import type { AppsData } from "~/types";
-import { profile } from "~/data/profile";
 
 // Each app is its own chunk, fetched the first time its window opens.
 const Finder = lazy(() => import("~/components/apps/Finder"));
 const About = lazy(() => import("~/components/apps/About"));
 const Bear = lazy(() => import("~/components/apps/Bear"));
-const Typora = lazy(() => import("~/components/apps/Typora"));
 const Safari = lazy(() => import("~/components/apps/Safari"));
 const VSCode = lazy(() => import("~/components/apps/VSCode"));
 const FaceTime = lazy(() => import("~/components/apps/FaceTime"));
@@ -21,7 +19,6 @@ const Messages = lazy(() => import("~/components/apps/Messages"));
 const Photos = lazy(() => import("~/components/apps/Photos"));
 const Clock = lazy(() => import("~/components/apps/Clock"));
 const Mail = lazy(() => import("~/components/apps/Mail"));
-const AppStore = lazy(() => import("~/components/apps/AppStore"));
 
 const apps: AppsData[] = [
   {
@@ -62,17 +59,6 @@ const apps: AppsData[] = [
     y: -40,
     img: "img/icons/bear.png",
     content: <Bear />,
-  },
-  {
-    id: "typora",
-    title: "Typora",
-    desktop: true,
-    width: 600,
-    height: 580,
-    hideOnMobile: true,
-    y: -20,
-    img: "img/icons/typora.png",
-    content: <Typora />,
   },
   {
     id: "safari",
@@ -125,14 +111,6 @@ const apps: AppsData[] = [
     content: <Terminal />,
   },
   {
-    id: "github",
-    title: "Github",
-    desktop: false,
-    hideOnMobile: true,
-    img: "img/icons/github.png",
-    link: profile.socials.github,
-  },
-  {
     id: "siri",
     title: "Siri",
     desktop: true,
@@ -148,10 +126,11 @@ const apps: AppsData[] = [
     id: "system-settings",
     title: "System Settings",
     desktop: true,
-    width: 720,
-    height: 520,
-    minWidth: 580,
+    width: 820,
+    height: 580,
+    minWidth: 360,
     minHeight: 420,
+    titlebar: "transparent",
     x: -40,
     y: 10,
     img: "img/icons/settings.png",
@@ -162,9 +141,9 @@ const apps: AppsData[] = [
     id: "notes",
     title: "Notes",
     desktop: true,
-    width: 720,
-    height: 480,
-    minWidth: 480,
+    width: 940,
+    height: 560,
+    minWidth: 640,
     minHeight: 340,
     x: 30,
     y: -10,
@@ -250,19 +229,6 @@ const apps: AppsData[] = [
     y: -10,
     img: "img/icons/mail.png",
     content: <Mail />,
-  },
-  {
-    id: "app-store",
-    title: "App Store",
-    desktop: true,
-    width: 760,
-    height: 540,
-    minWidth: 580,
-    minHeight: 420,
-    x: -30,
-    y: 20,
-    img: "img/icons/app-store.png",
-    content: <AppStore />,
   },
 ];
 

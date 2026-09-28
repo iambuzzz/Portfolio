@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { profile } from "~/data/profile";
 import Frame, { Key } from "./Frame";
+import { unlock } from "~/settings/activity";
 
 // `typing-test`: 30-second WPM test using words from Ambuj's tech stack.
 const DURATION = 30;
@@ -40,6 +41,10 @@ export default function TypingTest({ exit }: { exit: (summary?: React.ReactNode)
     const minutes = Math.max(elapsed, 1) / 60;
     return { wpm: Math.round(correct / 5 / minutes), acc: typed.length ? Math.round((correct / typed.length) * 100) : 100 };
   }, [typed, target, elapsed]);
+
+  useEffect(() => {
+    if (done && stats.wpm >= 50 && stats.acc >= 85) unlock("typist");
+  }, [done, stats.wpm, stats.acc]);
 
   const restart = () => {
     setTarget(makeText());

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Frame, { Key } from "./Frame";
+import { unlock } from "~/settings/activity";
 
 const COLS = 28;
 const ROWS = 16;
@@ -99,12 +100,14 @@ export default function Snake({ exit }: { exit: (summary?: React.ReactNode) => v
 
   useEffect(draw, []);
 
-  const finish = () =>
+  const finish = () => {
+    if (Math.max(best, score) >= 100) unlock("snake");
     exit(
       <span>
         snake: final score <b>{score}</b> · best <b>{Math.max(best, score)}</b>
       </span>
     );
+  };
 
   const onKey = (e: React.KeyboardEvent) => {
     const k = e.key.toLowerCase();

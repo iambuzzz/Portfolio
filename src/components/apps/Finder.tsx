@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowSize } from "~/hooks/useWindowSize";
-import { profile } from "~/data/profile";
+import { profile, thumbOf } from "~/data/profile";
+import { PhotoViewer } from "~/components/apps/Photos";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type ViewMode = "icons" | "list" | "columns";
@@ -19,6 +20,8 @@ interface FileItem {
   children?: FileItem[];
   /** Opened in a new tab on double-click. */
   url?: string;
+  /** Image files: a small preview used as the icon. */
+  thumb?: string;
 }
 
 // ─── Filesystem (built from the profile) ─────────────────────────────────────
@@ -87,8 +90,18 @@ const FILESYSTEM: Record<string, FileItem[]> = {
         icon: "/img/icons/sf-icons/folder.svg",
         color: "#34C759",
         children: [
-          { id: `${p.id}-live`, name: `${p.name} — Live Demo`, kind: "file" as const, ext: "webloc", date: p.date, icon: "/img/icons/safari.png", url: p.live },
-          { id: `${p.id}-github`, name: `${p.name} — GitHub`, kind: "file" as const, ext: "webloc", date: p.date, icon: "/img/icons/sf-icons/github.svg", url: p.github },
+          { id: `${p.id}-live`, name: "Live Website", kind: "file" as const, ext: "webloc", date: p.date, icon: "/img/icons/safari.png", url: p.live },
+          { id: `${p.id}-github`, name: "Source Code (GitHub)", kind: "file" as const, ext: "webloc", date: p.date, icon: "github", url: p.github },
+          ...p.screenshots.map((s, i) => ({
+            id: `${p.id}-shot-${i}`,
+            name: `${i + 1}. ${s.caption}.webp`,
+            kind: "file" as const,
+            ext: "webp",
+            date: p.date,
+            icon: "/img/icons/sf-icons/image.svg",
+            url: s.src,
+            thumb: thumbOf(s.src),
+          })),
         ],
       })),
     },
@@ -150,6 +163,14 @@ const SIDEBAR_SECTIONS = [
   },
 ];
 
+// Display name for a path segment (top-level or nested folder id).
+const nameOf = (id: string): string =>
+  id === "home"
+    ? profile.firstName
+    : FILESYSTEM.home.find((f) => f.id === id)?.name ??
+      FILESYSTEM.home.flatMap((f) => f.children ?? []).find((c) => c.id === id)?.name ??
+      id;
+
 // ─── File Icon Component ──────────────────────────────────────────────────────
 const FileIcon = ({ item, size = 56 }: { item: FileItem; size?: number }) => {
   if (item.kind === "folder") {
@@ -166,6 +187,35 @@ const FileIcon = ({ item, size = 56 }: { item: FileItem; size?: number }) => {
         alt={item.name}
         style={{ width: size, height: size, display: "inline-block", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))", objectFit: "contain" }}
       />
+    );
+  }
+
+  if (item.thumb) {
+    return (
+      <img
+        src={item.thumb}
+        alt={item.name}
+        loading="lazy"
+        style={{ width: size, height: size, display: "inline-block", objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}
+      />
+    );
+  }
+
+  // Web links: the site's icon on a white tile with a small ↗ badge.
+  if (item.ext === "webloc") {
+    return (
+      <span className="f-link-icon" style={{ width: size, height: size }} title={item.url}>
+        {item.icon === "github" ? (
+          <span className="i-fa6-brands:github" style={{ width: size * 0.62, height: size * 0.62, color: "#1b1f24" }} />
+        ) : (
+          <img src={item.icon} alt="" style={{ width: size * 0.78, height: size * 0.78 }} />
+        )}
+        {size >= 32 && (
+          <span className="f-link-badge">
+            <span className="i-ph:arrow-up-right-bold" />
+          </span>
+        )}
+      </span>
     );
   }
 
@@ -193,6 +243,8 @@ export default function Finder() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  /** Image open in Quick Look (instead of a new browser tab). */
+  const [preview, setPreview] = useState<FileItem | null>(null);
 
   const size = useWindowSize();
   const isMobile = size.winWidth < 768;
@@ -232,6 +284,8 @@ export default function Finder() {
       setPathStack((p) => [...p, item.id]);
       setLocation(item.id);
       setSelected(null);
+    } else if (item.thumb && item.url) {
+      setPreview(item);
     } else if (item.url) {
       window.open(item.url, "_blank", "noopener");
     }
@@ -440,11 +494,15 @@ export default function Finder() {
               color: "var(--f-text)",
               textAlign: "center",
               lineHeight: "1.3",
-              maxWidth: "82px",
+              maxWidth: "90px",
               overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              // Two lines like macOS, so similar names stay distinguishable.
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              wordBreak: "break-word",
             }}
+            title={item.name}
           >
             {item.name}
           </span>
@@ -563,6 +621,7 @@ export default function Finder() {
     <div
       className="finder-app"
       style={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -706,10 +765,7 @@ export default function Finder() {
         }}
       >
         {pathStack.map((seg, i) => {
-          const label =
-            seg === "home"
-              ? profile.firstName
-              : FILESYSTEM.home.find((f) => f.id === seg)?.name ?? seg;
+          const label = nameOf(seg);
           const isActive = i === pathStack.length - 1;
           return (
             <button
@@ -878,11 +934,7 @@ export default function Finder() {
         }}
       >
         {pathStack.map((seg, i) => {
-          const label =
-            seg === "home"
-              ? profile.firstName
-              : FILESYSTEM.home.find((f) => f.id === seg)?.name ??
-              seg;
+          const label = nameOf(seg);
           return (
             <React.Fragment key={seg}>
               {i > 0 && <span>›</span>}
@@ -908,6 +960,22 @@ export default function Finder() {
           );
         })}
       </div>
+
+      {/* Quick Look for screenshots: stays in the app, arrows step through the folder */}
+      <AnimatePresence>
+        {preview && (() => {
+          const images = sorted.filter((f) => f.thumb && f.url);
+          const i = images.findIndex((f) => f.id === preview.id);
+          return (
+            <PhotoViewer
+              photo={{ id: preview.id, url: preview.url!, label: preview.name.replace(/\.webp$/, ""), date: nameOf(location) }}
+              onClose={() => setPreview(null)}
+              onPrev={i > 0 ? () => setPreview(images[i - 1]) : undefined}
+              onNext={i < images.length - 1 ? () => setPreview(images[i + 1]) : undefined}
+            />
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }

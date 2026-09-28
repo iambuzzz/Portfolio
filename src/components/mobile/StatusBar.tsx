@@ -1,95 +1,69 @@
-import React, { useState, useEffect } from "react";
-import { useStore } from "~/stores";
+import { useEffect, useState, type RefObject } from "react";
+import { useMusicStore } from "~/stores/music";
+
+// iPhone status bar: time (tap → Notification Center), Dynamic Island (shows
+// the playing song as a live activity), signal/Wi-Fi/battery (tap → Control
+// Center). Text is white on the home screen and follows the app inside apps.
 
 interface StatusBarProps {
   isAppOpen: boolean;
-  appTitle?: string;
+  /** Dark glyphs (light app underneath). */
+  dark?: boolean;
   onLeftTap?: () => void;
   onRightTap?: () => void;
+  /** Dynamic Island: opens the live activity's app (or the camera). */
+  onIslandTap?: (live: boolean) => void;
+  rightRef?: RefObject<HTMLDivElement>;
 }
 
-export default function StatusBar({ isAppOpen, appTitle, onLeftTap, onRightTap }: StatusBarProps) {
+export default function StatusBar({ isAppOpen, dark, onLeftTap, onRightTap, onIslandTap, rightRef }: StatusBarProps) {
   const [time, setTime] = useState(new Date());
-
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(t);
   }, []);
+  // Only the current track: the store also ticks the playback position ~4×/s.
+  const track = useMusicStore((s) => (s.playing ? s.queue[s.index] : undefined));
+  const clock = time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).replace(/\s?[AP]M$/, "");
 
-  const h = time.getHours().toString().padStart(2, '0');
-  const m = time.getMinutes().toString().padStart(2, '0');
-
-  const dark = useStore((s) => s.dark);
-  
   return (
-    <div style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0,
-      height: "50px",
-      zIndex: 10000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "0 20px",
-      background: "transparent",
-      pointerEvents: "none"
-    }}>
-      {/* LEFT side - Time */}
-      <div 
-        onClick={onLeftTap}
-        style={{
-          pointerEvents: "auto",
-          cursor: "pointer",
-          width: "33%"
-        }}
+    <div className={`m-status ${dark ? "on-light" : ""} ${isAppOpen ? "in-app" : ""}`}>
+      <button type="button" className="m-status-time" onClick={onLeftTap} aria-label="Notification Center">
+        {clock}
+      </button>
+
+      <button
+        type="button"
+        className={`m-island ${track ? "live" : ""}`}
+        aria-label={track ? `Now playing ${track.title}` : "Camera"}
+        onClick={() => onIslandTap?.(!!track)}
       >
-        <span style={{
-          fontSize: "16px",
-          fontWeight: 700,
-          color: "white",
-          fontFamily: "-apple-system, sans-serif",
-          letterSpacing: "-0.3px",
-          textShadow: "0px 1px 3px rgba(0,0,0,0.4)"
-        }}>{h}:{m}</span>
-      </div>
+        {track && (
+          <>
+            <img src={track.thumbnail || track.cover} alt="" draggable={false} />
+            <span className="m-island-wave" aria-hidden>
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          </>
+        )}
+      </button>
 
-      {/* CENTER - Dynamic Island */}
-      <div style={{
-        position: "absolute",
-        left: "50%", top: "8px",
-        transform: "translateX(-50%)",
-        width: "110px", height: "32px",
-        background: "#000",
-        borderRadius: "20px",
-        pointerEvents: "auto"
-      }} />
-
-      {/* RIGHT side - Status icons row */}
-      <div 
-        onClick={onRightTap}
-        style={{
-          display: "flex", alignItems: "center", gap: "6px",
-          pointerEvents: "auto", cursor: "pointer",
-          width: "33%", justifyContent: "flex-end",
-          filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.4))"
-        }}
-      >
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="white">
-          <rect x="0" y="8" width="3" height="4" rx="0.5"/>
-          <rect x="4" y="5.5" width="3" height="6.5" rx="0.5"/>
-          <rect x="8" y="3" width="3" height="9" rx="0.5"/>
-          <rect x="12" y="0" width="3" height="12" rx="0.5"/>
+      <div ref={rightRef} className="m-status-right" onClick={onRightTap} role="button" aria-label="Control Center">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden>
+          <rect x="0" y="7" width="3" height="4" rx="1" />
+          <rect x="4.5" y="5" width="3" height="6" rx="1" />
+          <rect x="9" y="2.5" width="3" height="8.5" rx="1" />
+          <rect x="13.5" y="0" width="3" height="11" rx="1" />
         </svg>
-
-        <svg width="16" height="12" viewBox="0 0 24 18" fill="white">
-          <path d="M12 4C8.13 4 4.63 5.57 2.09 8.09L0 6C3.08 2.95 7.32 1 12 1s8.92 1.95 12 5l-2.09 2.09C19.37 5.57 15.87 4 12 4zm0 6c-2.21 0-4.21.9-5.66 2.34L4 10c1.98-1.98 4.72-3.2 7.76-3.2s5.78 1.22 7.76 3.2l-2.34 2.34C15.74 10.9 13.79 10 12 10zm0 6l-3-3c.78-.78 1.86-1.26 3-1.26s2.22.48 3 1.26L12 16z"/>
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor" aria-hidden>
+          <path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.2C13.3 1.5 10.8.5 8 .5S2.7 1.5.8 3.4L2 4.6c1.6-1.5 3.7-2.4 6-2.4Zm0 3.3c1.4 0 2.6.5 3.6 1.4l1.2-1.2C11.5 4.5 9.8 3.8 8 3.8S4.5 4.5 3.2 5.7l1.2 1.2c1-.9 2.2-1.4 3.6-1.4Zm0 3.3c.5 0 1 .2 1.3.5L8 10.6 6.7 9.3c.3-.3.8-.5 1.3-.5Z" />
         </svg>
-
-        <svg width="25" height="12" viewBox="0 0 25 12" fill="white">
-          <rect x="0" y="0" width="22" height="12" rx="3" fill="none" stroke="white" strokeWidth="1.2"/>
-          <rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="white"/>
-          <rect x="1.5" y="1.5" width="16" height="9" rx="2" fill="white"/>
-        </svg>
+        <span className="m-battery" aria-label="Battery full">
+          <span />
+        </span>
       </div>
     </div>
   );

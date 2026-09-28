@@ -12,7 +12,7 @@ export const json = (status: number, body: unknown, cacheControl = "no-store"): 
     headers: { "Content-Type": "application/json", "Cache-Control": cacheControl }
   });
 
-export function guard(req: Request, method: "GET" | "POST" = "POST"): Response | null {
+export function guard(req: Request, method: "GET" | "POST" = "POST", max = MAX_REQUESTS): Response | null {
   if (req.method !== method) return json(405, { error: "Method not allowed" });
 
   // Browsers always send Origin on cross-site POSTs; reject other sites.
@@ -29,7 +29,7 @@ export function guard(req: Request, method: "GET" | "POST" = "POST"): Response |
   const now = Date.now();
   const bucket = `${ip} ${new URL(req.url).pathname}`;
   const recent = (hits.get(bucket) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_REQUESTS) {
+  if (recent.length >= max) {
     return json(429, { error: "Too many requests, try again in a minute." });
   }
   recent.push(now);

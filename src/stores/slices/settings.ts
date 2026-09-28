@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import { unlock } from "~/settings/activity";
 
 // Accent color can be a named key or a hex string
 export type AccentColorKey =
@@ -42,13 +43,6 @@ export const wallpaperSets: WallpaperSet[] = [
     day: "wallpapers/macOS_Tahoe_LightDefault.webp",
     night: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
     thumbnail: "wallpapers/macOS_Tahoe_LightDefault.webp",
-  },
-  {
-    id: "tahoe-beach",
-    name: "Tahoe Beach",
-    day: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
-    night: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
-    thumbnail: "wallpapers/DefaultAerial_Tahoe_Beach.webp",
   },
   {
     id: "ventura",
@@ -109,6 +103,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
   setActiveWallpaperSet: (id) => {
     saveSetting("activeWallpaperSet", id);
     saveSetting("wallpaperId", id);
+    unlock("decorator");
     set({ activeWallpaperSet: id, wallpaperId: id });
   },
   /** @deprecated */

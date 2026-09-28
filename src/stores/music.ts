@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { fetchSong } from "~/utils/saavn";
+import { unlock } from "~/settings/activity";
 
 export interface Track {
   id: string; // JioSaavn song id
@@ -113,6 +114,7 @@ export const useMusicStore = create<MusicState>()(
           recent: [track, ...s.recent.filter((r) => r.id !== track.id)].slice(0, 20)
         }));
         load(track);
+        unlock("dj");
       },
       toggle: (play) => {
         const { queue, index, playing } = get();

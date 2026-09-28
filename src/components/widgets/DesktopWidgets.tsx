@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWidgetStore, WIDGET_CATALOG, type WidgetKind } from "~/stores/widgets";
 import CalendarWidget from "./CalendarWidget";
@@ -105,6 +105,7 @@ function DraggableWidget({ id, x, y, editing }: { id: WidgetKind; x: number; y: 
   return (
     <motion.div
       ref={ref}
+      data-widget={id}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: dragging ? 1.03 : 1 }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.18 } }}
@@ -259,12 +260,23 @@ function WidgetGallery() {
 export default function DesktopWidgets() {
   const widgets = useWidgetStore((s) => s.widgets);
   const galleryOpen = useWidgetStore((s) => s.galleryOpen);
+  const tidy = useWidgetStore((s) => s.tidy);
+
+  // Once widgets have rendered (real sizes known), fix any overlaps.
+  useEffect(() => {
+    const t = setTimeout(tidy, 600);
+    window.addEventListener("resize", tidy);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", tidy);
+    };
+  }, [tidy]);
 
   return (
     <>
       <AnimatePresence>
         {widgets.map((w) => (
-          <DraggableWidget key={w.id} id={w.id} x={w.x} y={w.y} editing={galleryOpen} />
+          <DraggableWidget key={`${w.id}-${w.key ?? 0}`} id={w.id} x={w.x} y={w.y} editing={galleryOpen} />
         ))}
       </AnimatePresence>
       <AnimatePresence>{galleryOpen && <WidgetGallery />}</AnimatePresence>
