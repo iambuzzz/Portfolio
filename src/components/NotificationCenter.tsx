@@ -50,8 +50,9 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
 
   const { winWidth } = useWindowSize();
   const isMobile = winWidth < 768;
-  // Phone shows how many there are (like iOS); the laptop keeps the unread count.
-  const unread = isMobile ? notifications.length : notifications.filter((n) => !n.read).length;
+  // The badge counts what's in the list (it used to count only unread ones on
+  // the laptop, so it said 2 next to 3 notifications).
+  const unread = notifications.length;
 
   // Phone: swipe up anywhere on the sheet closes it (once scrolled to the end).
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -96,7 +97,7 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
           {/* Staggered column of discrete glass cards */}
           <motion.div
             key="nc-cards"
-            className={isMobile ? "m-nc-sheet" : undefined}
+            className={isMobile ? "m-nc-sheet" : "nc-desk"}
             variants={isMobile ? undefined : containerVariants}
             initial={isMobile ? { y: "-100%", opacity: 0.5 } : "hidden"}
             animate={isMobile ? { y: 0, opacity: 1 } : "visible"}
@@ -174,7 +175,7 @@ export default function NotificationCenter({ show, onClose }: NotificationCenter
             </motion.div>
 
             {/* Notifications card */}
-            <motion.div variants={cardVariants} className={isMobile ? "m-nc-list" : undefined} style={{ ...CARD, overflow: "hidden" }}>
+            <motion.div variants={cardVariants} className={isMobile ? "m-nc-list" : "nc-desk-list"} style={{ ...CARD, overflow: "hidden" }}>
               {notifications.length === 0 ? (
                 <div style={{ padding: "20px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
                   No notifications

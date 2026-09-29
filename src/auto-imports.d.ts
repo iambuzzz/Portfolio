@@ -60,6 +60,7 @@ declare global {
   const SystemSettings: typeof import('./components/apps/SystemSettings')['default']
   const Terminal: typeof import('./components/apps/Terminal')['default']
   const TopBar: typeof import('./components/menus/TopBar')['default']
+  const Tour: typeof import('./components/Tour')['default']
   const TxtIcon: typeof import('./components/DesktopIcons')['TxtIcon']
   const VSCode: typeof import('./components/apps/VSCode')['default']
   const VideoIcon: typeof import('./components/DesktopIcons')['VideoIcon']

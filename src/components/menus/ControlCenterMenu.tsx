@@ -421,7 +421,8 @@ export default function ControlCenterMenu({
           </div>
         ) : (
           <>
-            {/* Desktop Layout */}
+            {/* Desktop Layout: same tiles as macOS, but only controls that do something. */}
+            {/* Left: every toggle in one tile. Right: the four one-tap buttons. */}
             <div className="cc-grid row-span-2 col-span-2 p-2.5 flex flex-col justify-around space-y-1">
               <div className="hstack space-x-2">
                 <div className={`${wifi ? "cc-btn" : "cc-btn-active"}`} onClick={toggleWIFI}>
@@ -432,37 +433,16 @@ export default function ControlCenterMenu({
                   <div className="cc-text">{wifi ? "Home" : "Off"}</div>
                 </div>
               </div>
-              <div className="hstack space-x-2">
-                <div className={`${bluetooth ? "cc-btn" : "cc-btn-active"}`} onClick={toggleBluetooth}>
-                  <span className="i-ph:bluetooth text-base" />
-                </div>
-                <div p="t-0.5">
-                  <div className="font-medium leading-4" style={{ fontSize: '12px' }}>Bluetooth</div>
-                  <div className="cc-text">{bluetooth ? "On" : "Off"}</div>
-                </div>
-              </div>
-              <div className="hstack space-x-2">
-                <div className={`${airdrop ? "cc-btn" : "cc-btn-active"}`} onClick={toggleAirdrop}>
-                  <span className="i-ph:rss text-base" />
-                </div>
-                <div p="t-0.5">
-                  <div className="font-medium leading-4" style={{ fontSize: '12px' }}>AirDrop</div>
-                  <div className="cc-text">{airdrop ? "Everyone" : "Off"}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="cc-grid col-span-2 p-2.5 flex flex-col justify-around space-y-2">
-              <div className="hstack space-x-2.5 cursor-pointer" onClick={toggleFocus}>
+              <div className="hstack space-x-2 cursor-pointer" onClick={toggleFocus}>
                 <div className={`${focusMode ? "cc-btn" : "cc-btn-active"}`}>
                   <span className="i-ph:moon text-base" />
                 </div>
                 <div p="t-0.5">
                   <div className="font-medium leading-4" style={{ fontSize: '12px' }}>Focus</div>
-                  <div className="cc-text">{focusMode ? "Do Not Disturb" : "Off"}</div>
+                  <div className="cc-text">{focusMode ? "Pop-ups hidden" : "Off"}</div>
                 </div>
               </div>
-              <div className="hstack space-x-2.5 cursor-pointer" onClick={toggleDark}>
+              <div className="hstack space-x-2 cursor-pointer" onClick={toggleDark}>
                 <div className={`${dark ? "cc-btn" : "cc-btn-active"}`}>
                   {dark ? (
                     <span className="i-ph:moon text-base" />
@@ -472,11 +452,26 @@ export default function ControlCenterMenu({
                 </div>
                 <div className="font-medium" style={{ fontSize: '12px' }}>{dark ? "Dark Mode" : "Light Mode"}</div>
               </div>
+              <div
+                className="hstack space-x-2 cursor-pointer"
+                role="button"
+                aria-label="Solid UI (Reduce Transparency)"
+                aria-pressed={reduceTransparency}
+                onClick={() => usePrefs.getState().set("reduceTransparency", !reduceTransparency)}
+              >
+                <div className={`${reduceTransparency ? "cc-btn" : "cc-btn-active"}`}>
+                  <span className="i-ph:drop-half-bottom-fill text-base" />
+                </div>
+                <div p="t-0.5">
+                  <div className="font-medium leading-4" style={{ fontSize: '12px' }}>Solid UI</div>
+                  <div className="cc-text">{reduceTransparency ? "On" : "Off"}</div>
+                </div>
+              </div>
             </div>
 
-            <div className="cc-grid flex-center flex-col cursor-pointer py-2">
-              <span className="i-ph:sun text-xl" />
-              <span className="text-center mt-1" style={{ fontSize: '10px', lineHeight: '12px' }}>Keyboard Brightness</span>
+            <div className="cc-grid flex-center flex-col cursor-pointer py-2" role="button" aria-pressed={muted} onClick={toggleMute}>
+              <span className={`${muted ? "i-ph:speaker-slash" : "i-ph:speaker-high"} text-base`} />
+              <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>{muted ? "Unmute" : "Mute"}</span>
             </div>
             <div className="cc-grid flex-center flex-col cursor-pointer py-2" onClick={() => toggleFullScreen(!fullscreen)}>
               {fullscreen ? (
@@ -487,13 +482,13 @@ export default function ControlCenterMenu({
               <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>{fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}</span>
             </div>
 
-            <div className="cc-grid flex-center flex-col cursor-pointer py-2">
-              <span className="i-ph:squares-four text-base" />
-              <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>Stage Manager</span>
+            <div className="cc-grid flex-center flex-col cursor-pointer py-2" role="button" onClick={() => openFromCC("clock")}>
+              <span className="i-ph:clock text-base" />
+              <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>Clock</span>
             </div>
-            <div className="cc-grid flex-center flex-col cursor-pointer py-2">
-              <span className="i-ph:screencast text-base" />
-              <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>Screen Mirroring</span>
+            <div className="cc-grid flex-center flex-col cursor-pointer py-2" role="button" onClick={() => openFromCC("facetime")}>
+              <span className="i-ph:camera text-base" />
+              <span className="text-center mt-1.5" style={{ fontSize: '10px', lineHeight: '12px' }}>Camera</span>
             </div>
 
             <div className="cc-grid col-span-4 px-2.5 py-2 space-y-1 flex flex-col justify-around">
@@ -517,27 +512,18 @@ export default function ControlCenterMenu({
                 <div className="font-medium" style={{ fontSize: '12px' }}>{music.title}</div>
                 <div className="cc-text">{music.artist}</div>
               </div>
+              {mPlayer.has && (
+                <span className="i-ph:skip-back-fill text-lg cursor-pointer" role="button" aria-label="Previous song" onClick={() => mPlayer.prev()} />
+              )}
               {playing ? (
                 <span className="i-ph:pause-fill text-2xl play cursor-pointer" onClick={() => toggleAudio(false)} />
               ) : (
-                <span className="i-ph:play-fill text-2xl pause cursor-pointer" onClick={() => toggleAudio(true)} />
+                // Nothing queued yet: open Spotify to pick something (as on the phone).
+                <span className="i-ph:play-fill text-2xl pause cursor-pointer" onClick={() => (mPlayer.has ? toggleAudio(true) : openFromCC("spotify"))} />
               )}
-            </div>
-
-            <div className="col-span-4 flex-center pt-0.5 pb-0.5">
-              <button
-                className="hstack space-x-1 cursor-pointer"
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--color-c-500, rgba(0,0,0,0.45))",
-                  fontSize: "11px",
-                  padding: "2px 8px",
-                }}
-              >
-                <span className="i-ph:sliders text-sm" />
-                <span>Edit Controls</span>
-              </button>
+              {mPlayer.has && (
+                <span className="i-ph:skip-forward-fill text-lg cursor-pointer" role="button" aria-label="Next song" onClick={() => mPlayer.next()} />
+              )}
             </div>
           </>
         )}

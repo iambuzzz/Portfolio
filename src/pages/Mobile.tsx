@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
 import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, animate, motion, useAnimationControls, useMotionValue, type AnimationControls } from "framer-motion";
+import { AnimatePresence, animate, motion, useAnimationControls, useDragControls, useMotionValue, type AnimationControls } from "framer-motion";
 import { wallpaperSrc } from "~/utils";
 import AppLoading from "~/components/AppLoading";
 import AppErrorBoundary from "~/components/AppErrorBoundary";
@@ -22,6 +22,7 @@ import { ProfileWidget, WeatherSmall, GitHubSmall, MusicWidget, CalendarSmall, P
 import { useAudioContext } from "~/context/AudioContext";
 import { unlock, useActivity } from "~/settings/activity";
 import { AchievementToasts } from "~/settings/Effects";
+import Tour from "~/components/Tour";
 import "~/styles/mobile.css";
 
 // iPhone-style shell: paged home screen with widgets, an App Library, apps that
@@ -32,14 +33,14 @@ import "~/styles/mobile.css";
 const CAN_FULLSCREEN =
   typeof document !== "undefined" && !!(document.fullscreenEnabled || (document as Document & { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
 
-const DOCK = ["terminal", "bear", "about", "siri", "spotify"];
+const DOCK = ["terminal", "link:resume", "about", "siri", "mail"];
 const PAGE_APPS = [
   // Full Screen sits second on page 1 (Maps takes Clock's spot; Clock lives in
   // the App Library); on iPhones, which can't go full screen, the original order stays.
   CAN_FULLSCREEN
-    ? ["photos", "action:fullscreen", "notes", "mail", "maps", "facetime", "finder", "system-settings"]
-    : ["photos", "maps", "notes", "mail", "clock", "facetime", "finder", "system-settings"],
-  ["messages", "safari", "vscode", ...profile.projects.map((p) => `project:${p.id}`), "link:resume", "link:github"]
+    ? ["photos", "action:fullscreen", "notes", "spotify", "maps", "facetime", "finder", "system-settings"]
+    : ["photos", "maps", "notes", "spotify", "clock", "facetime", "finder", "system-settings"],
+  ["messages", "safari", "vscode", ...profile.projects.map((p) => `project:${p.id}`), "bear", "link:github"]
 ];
 const MAX_RECENTS = 6;
 // Apps with dark chrome: black behind the status bar, white status text.
@@ -408,6 +409,27 @@ export default function Mobile(_props: MacActions) {
   // ── home pages (swipe) ────────────────────────────────────────────────────
   const PAGES = 3;
   const dragged = useRef(false);
+  // Which way a touch is going is decided here, not by framer: a page swipe
+  // starts only for a clearly sideways move. A scroll that begins with a little
+  // sideways wobble was read as a swipe (the browser had already declined to
+  // scroll it), so the page jerked sideways instead of scrolling.
+  const pageDrag = useDragControls();
+  const gesture = useRef<{ id: number; x: number; y: number; lastY: number; axis: "x" | "y" | null; page: HTMLElement | null } | null>(null);
+  const onPagesPointerMove = (e: React.PointerEvent) => {
+    const g = gesture.current;
+    if (!g || g.id !== e.pointerId) return;
+    if (!g.axis) {
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
+      if (Math.hypot(dx, dy) < 10) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) * 1.5 ? "x" : "y";
+      if (g.axis === "x") pageDrag.start(e);
+    }
+    // Vertical: scroll the page ourselves. When the browser scrolls it natively
+    // it cancels the pointer, so this never doubles up.
+    if (g.axis === "y" && g.page) g.page.scrollTop -= e.clientY - g.lastY;
+    g.lastY = e.clientY;
+  };
   // The pages' x is driven directly: after every swipe it snaps to the page,
   // even when the page number didn't change (short swipe, or past the last
   // page). A declarative `animate` only re-runs on change, which left the pages
@@ -506,7 +528,14 @@ export default function Mobile(_props: MacActions) {
           className={`m-pages ${pagesEase ? "m-pages-ease" : ""}`}
           style={{ width: W * PAGES, x: pagesX }}
           drag="x"
-          dragDirectionLock
+          dragControls={pageDrag}
+          dragListener={false}
+          onPointerDown={(e) => {
+            gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, lastY: e.clientY, axis: null, page: (e.target as HTMLElement).closest(".m-page") };
+          }}
+          onPointerMove={onPagesPointerMove}
+          onPointerUp={() => (gesture.current = null)}
+          onPointerCancel={() => (gesture.current = null)}
           dragConstraints={{ left: -(PAGES - 1) * W, right: 0 }}
           dragElastic={0.18}
           dragMomentum={false}
@@ -710,6 +739,7 @@ export default function Mobile(_props: MacActions) {
       {dimBy > 0 && <div className="m-dim" aria-hidden style={{ opacity: dimBy }} />}
       {/* Focus (Control Center) hides pop-ups; they are still recorded in Screen Time. */}
       {!focusMode && <AchievementToasts />}
+      <Tour phone />
     </div>
   );
 }

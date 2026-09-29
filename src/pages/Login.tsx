@@ -5,6 +5,7 @@ import { user } from "~/configs";
 import type { MacActions } from "~/types";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePrefs } from "~/settings/prefs";
 
 export default function Login(props: MacActions) {
   const [password, setPassword] = useState("");
@@ -147,6 +148,27 @@ export default function Login(props: MacActions) {
                 >
                   <span className="i-ph:arrow-elbow-down-left" style={{ fontSize: '14px', opacity: 0.8 }} />
                   Sign In
+                </button>
+              </motion.div>
+
+              {/* Recruiter Mode: straight in, calmer motion, About first. */}
+              <motion.div
+                className="flex justify-center items-center mt-2.5"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38, duration: 0.4 }}
+              >
+                <button
+                  type="button"
+                  className="login-recruiter"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    usePrefs.getState().setRecruiterMode(true);
+                    props.setLogin(true);
+                  }}
+                >
+                  <span className="i-ph:briefcase" />
+                  Recruiter Mode
                 </button>
               </motion.div>
 

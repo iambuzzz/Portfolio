@@ -25,6 +25,8 @@ export interface Prefs {
   skipIntro: boolean; // skip the login screen on return visits
   startupApp: StartupApp;
   recruiterMode: boolean;
+  /** The first-visit tour was finished or skipped. */
+  tourDone: boolean;
 }
 
 // Phones (the iOS view, same breakpoint) start with Reduce Motion on: lighter
@@ -44,7 +46,8 @@ export const DEFAULT_PREFS: Prefs = {
   siriAutoListen: true,
   skipIntro: false,
   startupApp: "about",
-  recruiterMode: false
+  recruiterMode: false,
+  tourDone: false
 };
 
 interface PrefsState extends Prefs {

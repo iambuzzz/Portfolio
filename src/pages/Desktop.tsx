@@ -19,6 +19,7 @@ import { useWindowSize } from "~/hooks";
 import { initialPrefs } from "~/settings/prefs";
 import { useActivity } from "~/settings/activity";
 import { AchievementToasts } from "~/settings/Effects";
+import Tour from "~/components/Tour";
 
 interface DesktopState {
   showApps: { [key: string]: boolean };
@@ -90,9 +91,10 @@ export default function Desktop(props: MacActions) {
     return () => window.removeEventListener("system:command", onCommand);
   }, []);
 
-  const { dark, brightness } = useStore(useShallow((s) => ({
+  const { dark, brightness, focusMode } = useStore(useShallow((s) => ({
     dark: s.dark,
     brightness: s.brightness,
+    focusMode: s.focusMode,
   })));
 
   const { isMobile } = useWindowSize();
@@ -360,7 +362,9 @@ export default function Desktop(props: MacActions) {
         openAboutMac={() => setShowAboutMac(true)}
       />
 
-      <AchievementToasts />
+      {/* Focus (Control Center) hides pop-ups, as on the phone. */}
+      {!focusMode && <AchievementToasts />}
+      <Tour phone={false} />
 
       {/* Dynamic Island */}
       <DynamicIsland hide={hideDockAndTopbar || state.showLaunchpad} />
