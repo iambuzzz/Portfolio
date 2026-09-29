@@ -21,7 +21,7 @@ ${profile.summary}
 
 ## Résumé
 
-[Download my résumé (PDF)](${profile.resume})
+[Download my résumé (PDF)](${profile.resumeDownload})
 `;
 
 const education = `# Education

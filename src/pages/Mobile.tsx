@@ -647,7 +647,7 @@ export default function Mobile(_props: MacActions) {
                 >
                   <span className="i-ph:eye" /> View Résumé
                 </button>
-                <a className="m-sheet-btn" href={profile.resume} download={profile.resumeFileName} onClick={() => setResumeSheet(false)}>
+                <a className="m-sheet-btn" href={profile.resumeDownload} download={profile.resumeFileName} onClick={() => setResumeSheet(false)}>
                   <span className="i-ph:download-simple" /> Download PDF
                 </a>
               </div>

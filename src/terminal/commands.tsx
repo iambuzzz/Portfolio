@@ -445,7 +445,7 @@ const list: Command[] = [
     summary: "download the résumé (PDF)",
     run: (_, ctx) => {
       const a = document.createElement("a");
-      a.href = profile.resume;
+      a.href = profile.resumeDownload;
       a.download = profile.resumeFileName;
       a.click();
       unlock("resume");

@@ -138,7 +138,7 @@ export default function About() {
             {p.location}
           </div>
           <div className="flex flex-wrap justify-center" style={{ gap: 8, marginTop: 16 }}>
-            <ActionButton href={p.resume} icon="i-ph:file-arrow-down" label="Résumé" download={p.resumeFileName} primary />
+            <ActionButton href={p.resumeDownload} icon="i-ph:file-arrow-down" label="Résumé" download={p.resumeFileName} primary />
             <ActionButton href={`mailto:${p.email}`} icon="i-ph:envelope-simple" label="Email" />
             <ActionButton href={p.socials.github} icon="i-fa6-brands:github" label="GitHub" />
             <ActionButton href={p.socials.linkedin} icon="i-fa6-brands:linkedin" label="LinkedIn" />

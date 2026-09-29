@@ -112,9 +112,8 @@ export default function Siri({ closeSiri, mobile }: { closeSiri?: () => void; mo
   const downloadResume = useCallback(() => {
     // console.log("[Tool]  Triggering resume download");
     const link = document.createElement("a");
-    link.href = profile.resume;
+    link.href = profile.resumeDownload;
     link.download = profile.resumeFileName;
-    link.target = "_blank";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -114,7 +114,7 @@ export default function Htop({ exit }: { exit: () => void }) {
             <span style={cell(74, true)}>{fmtTime(r.time)}</span>
             <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               <b>{r.name.toLowerCase().replace(/\s+/g, "-")}</b>
-              <span style={{ opacity: 0.6 }}> --group={r.group.toLowerCase().replace(/\s+&\s+|\s+/g, "-")}</span>
+              <span style={{ opacity: 0.6 }}> --group={r.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")}</span>
             </span>
           </div>
         ))}

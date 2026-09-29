@@ -289,7 +289,7 @@ export default function Spotlight({ toggleSpotlight, openApp, toggleLaunchpad, b
     list.push(
       action("resume", "Download Résumé", "i-ph:download-simple-bold", "#34c759", `Save ${profile.resumeFileName} (PDF).`, () => {
         const a = document.createElement("a");
-        a.href = profile.resume;
+        a.href = profile.resumeDownload;
         a.download = profile.resumeFileName;
         a.click();
         unlock("resume");

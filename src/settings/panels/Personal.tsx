@@ -16,7 +16,7 @@ const openApp = (id: string) => window.dispatchEvent(new CustomEvent("app:open",
 export function ProfilePanel() {
   const downloadResume = () => {
     const a = document.createElement("a");
-    a.href = profile.resume;
+    a.href = profile.resumeDownload;
     a.download = profile.resumeFileName;
     a.click();
     unlock("resume");

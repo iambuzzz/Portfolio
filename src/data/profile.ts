@@ -49,7 +49,10 @@ export const profile = {
   location: "Kota, Rajasthan, India",
   /** Replace with the real photo once provided (public/img/ui/…). */
   avatar: "/img/Profile/avatar.jpg",
-  resume: "/resume.pdf",
+  /** Google Drive. Update it there with "Manage versions" and this link keeps working. */
+  resume: "https://drive.google.com/file/d/1IJ2_cZDjH5wiw7GpG40k3QXP9qb9HzTY/view?usp=drive_link",
+  /** Direct download of the same Drive file. */
+  resumeDownload: "https://drive.google.com/uc?export=download&id=1IJ2_cZDjH5wiw7GpG40k3QXP9qb9HzTY",
   resumeFileName: "Ambuj_Jaiswal_Resume.pdf",
 
   email: "ambujjais1@gmail.com",
@@ -97,7 +100,7 @@ export const profile = {
       github: "https://github.com/iambuzzz/DevTinder",
       live: "https://devtinder.iambuzzdev.in/",
       highlights: [
-        "Architected a scalable platform behind an Nginx Load Balancer, integrating Razorpay for subscriptions, AWS S3 for media storage, and Redux Toolkit for global state.",
+        "Architected a horizontally scalable platform behind an Nginx Load Balancer, integrating Razorpay for subscriptions, AWS S3 for media storage, and Redux Toolkit for global state.",
         "Engineered a distributed real-time chat across multiple Node.js nodes, utilizing Redis for centralized sessions and gRPC for low-latency, cross-server message routing.",
         "Transitioned to an Event-Driven Architecture with Apache Kafka, ensuring message durability via offline queues, and optimizing online presence tracking by reducing O(N²) broadcast overheads to O(1) targeted events.",
         "Streamlined operations by offloading emails (AWS SES) to a Bull (Redis) background queue, and deployed on AWS EC2 with PM2 & Cloudflare SSL for high availability."
@@ -115,7 +118,7 @@ export const profile = {
       github: "https://github.com/iambuzzz/BuddyBoard",
       live: "https://buddy-board-one.vercel.app/",
       highlights: [
-        "Architected a real-time productivity app using Next.js and Firebase Firestore, engineering live data sync for secure user pairing and group collaboration via a custom invitation system.",
+        "Developed a real-time productivity app using Next.js and Firebase Firestore, engineering live data sync for a secure user pairing and group collaboration via a custom invitation system.",
         "Developed categorized task management featuring real-time timers (Deep Work, Growth, Chores), and visualized user progress trends using interactive Recharts with brush-based time filtering.",
         "Integrated engagement drivers including an auto-saving notes editor, goal tracking, and a streak system, managing complex client-side state across dynamic UI components.",
         "Designed a polished, theme-aware UI with Tailwind CSS and Framer Motion, implementing engaging animations (card-flips, overlays) and a highly responsive dark mode."
@@ -144,14 +147,15 @@ export const profile = {
   ] satisfies Project[],
 
   skills: {
+    "Core CS": ["Data Structures & Algorithms", "OOPs", "DBMS", "System Design (HLD)"],
     Languages: ["C", "Java", "Python", "JavaScript", "TypeScript"],
     "Frameworks & Libraries": [
       "React.js", "Next.js", "Node.js", "Express.js", "Tailwind CSS", "Shadcn UI", "Redux Toolkit",
       "Zustand", "TanStack React Query", "Socket.io", "Better Auth", "Clerk"
     ],
     "Databases & ORMs": ["MongoDB", "MySQL", "PostgreSQL", "Redis", "Prisma", "Drizzle"],
-    "Tools & Platforms": ["Git", "GitHub", "Postman", "Linux", "Docker", "Cloudinary", "AWS"],
-    Architecture: ["Kafka", "gRPC", "Microservices", "System Design (HLD)"]
+    "Tools, Platform & Architecture": ["Git", "GitHub", "Postman", "Linux", "Docker", "Cloudinary", "AWS", "Kafka", "gRPC", "Microservices"],
+    "AI-Assisted Development": ["Claude Code", "Google Antigravity", "Firebase Studio", "Gemini"]
   } as Record<string, string[]>,
 
   certifications: [
