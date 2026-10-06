@@ -4,6 +4,9 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/assets/:file(.+\\.js)", "destination": "/stale-asset.js" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

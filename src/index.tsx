@@ -341,6 +341,16 @@ window.addEventListener("dragstart", (e) => {
   if (e.target instanceof HTMLImageElement || e.target instanceof HTMLAnchorElement) e.preventDefault();
 });
 
+// public/stale-asset.js reloads an out-of-date page with ?_r=<time> to skip the
+// browser cache; tidy the address bar once the current page is here.
+{
+  const url = new URL(location.href);
+  if (url.searchParams.has("_r")) {
+    url.searchParams.delete("_r");
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+  }
+}
+
 const rootElement = document.getElementById("root") as HTMLElement;
 const root = createRoot(rootElement);
 
